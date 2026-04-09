@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Scan, PlusCircle, History, Trash2, Copy, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Scanner from './components/Scanner';
@@ -23,21 +23,26 @@ export default function App() {
     if (saved) setHistory(JSON.parse(saved));
   }, []);
 
-  const saveToHistory = (text: string, type: string) => {
+  const saveToHistory = useCallback((text: string, type: string) => {
     const newItem: ScanHistoryItem = {
       id: Math.random().toString(36).substr(2, 9),
       text,
       timestamp: Date.now(),
       type
     };
-    const updated = [newItem, ...history].slice(0, 50);
-    setHistory(updated);
-    localStorage.setItem('scan-history', JSON.stringify(updated));
-    setLastScanned(text);
     
-    // Auto switch to history or show a toast? Let's show a success state
-    setTimeout(() => setLastScanned(null), 3000);
-  };
+    setHistory(prev => {
+      const updated = [newItem, ...prev].slice(0, 50);
+      localStorage.setItem('scan-history', JSON.stringify(updated));
+      return updated;
+    });
+    
+    setLastScanned(text);
+  }, []);
+
+  const handleScan = useCallback((text: string) => {
+    saveToHistory(text, 'QR/Barcode');
+  }, [saveToHistory]);
 
   const clearHistory = () => {
     setHistory([]);
@@ -81,19 +86,51 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="space-y-6"
             >
-              <Scanner onScan={(text) => saveToHistory(text, 'QR/Barcode')} />
+              <Scanner onScan={handleScan} />
               
               {lastScanned && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-hw-card text-white p-4 rounded-2xl shadow-xl flex items-center justify-between gap-4"
+                  className="bg-hw-card text-white p-5 rounded-3xl shadow-2xl border border-white/5 space-y-4"
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-mono text-hw-secondary uppercase mb-1">Last Scanned</p>
-                    <p className="text-sm font-mono truncate">{lastScanned}</p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-mono text-hw-secondary uppercase mb-1 tracking-widest">Scanned Result</p>
+                      <p className="text-sm font-mono break-all leading-relaxed text-hw-accent">{lastScanned}</p>
+                    </div>
+                    <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-6 h-6 text-green-400" />
+                    </div>
                   </div>
-                  <CheckCircle2 className="w-6 h-6 text-green-400 shrink-0" />
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {lastScanned.startsWith('http') && (
+                      <a
+                        href={lastScanned}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="col-span-2 flex items-center justify-center gap-2 bg-hw-accent hover:bg-hw-accent/80 text-white py-3 rounded-xl text-xs font-mono uppercase tracking-widest transition-all"
+                      >
+                        <ExternalLink className="w-4 h-4" /> Open Link
+                      </a>
+                    )}
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(lastScanned);
+                        // Optional: show copy success
+                      }}
+                      className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest transition-all"
+                    >
+                      <Copy className="w-4 h-4" /> Copy
+                    </button>
+                    <button
+                      onClick={() => setLastScanned(null)}
+                      className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest transition-all"
+                    >
+                      <Scan className="w-4 h-4" /> Scan Again
+                    </button>
+                  </div>
                 </motion.div>
               )}
             </motion.div>
