@@ -1,0 +1,5 @@
+{
+  "name": "ScanOQRsPro",
+  "description": "A powerful QR code and barcode scanner and generator.",
+  "requestFramePermissions": ["camera"]
+}
