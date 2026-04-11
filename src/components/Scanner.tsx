@@ -1,211 +1,261 @@
-import { useEffect, useRef, useState } from 'react';
-import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
-import { Camera, RefreshCw, XCircle, AlertCircle, ShieldAlert } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Camera, RefreshCw, AlertCircle, ShieldAlert, Image as ImageIcon, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 
 interface ScannerProps {
   onScan: (decodedText: string, decodedResult: any) => void;
+  mode?: 'qr' | 'barcode';
 }
 
-type CameraStatus = 'checking' | 'ready' | 'denied' | 'unavailable' | 'error';
+type CameraStatus = 'checking' | 'ready' | 'denied' | 'unavailable' | 'error' | 'scanning_file';
 
-export default function Scanner({ onScan }: ScannerProps) {
+const SCAN_CONFIG = {
+  fps: 10,
+  qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+    const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+    const qrboxSize = Math.floor(minEdgeSize * 0.7);
+    return {
+      width: qrboxSize,
+      height: qrboxSize
+    };
+  },
+  aspectRatio: 1.0,
+};
+
+const BARCODE_CONFIG = {
+  fps: 10,
+  qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+    return {
+      width: Math.floor(viewfinderWidth * 0.8),
+      height: Math.floor(viewfinderHeight * 0.3)
+    };
+  },
+  aspectRatio: 1.0,
+};
+
+export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
   const [status, setStatus] = useState<CameraStatus>('checking');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const startScanner = async () => {
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current && scannerRef.current.isScanning) {
+      try {
+        await scannerRef.current.stop();
+        setIsCameraActive(false);
+      } catch (err) {
+        console.error("Failed to stop scanner", err);
+      }
+    }
+  }, []);
+
+  const startScanner = useCallback(async () => {
+    await stopScanner();
     setStatus('checking');
     setErrorMsg(null);
 
     try {
-      const devices = await Html5Qrcode.getCameras();
-      if (!devices || devices.length === 0) {
-        setStatus('unavailable');
-        setErrorMsg("No camera hardware detected.");
-        return;
+      const formats = mode === 'barcode' 
+        ? [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+          ]
+        : [Html5QrcodeSupportedFormats.QR_CODE];
+
+      if (scannerRef.current) {
+        try {
+          await scannerRef.current.clear();
+        } catch (e) {
+          // ignore
+        }
       }
 
-      const scanner = new Html5QrcodeScanner(
-        'reader',
-        { 
-          fps: 20, 
-          qrbox: (viewfinderWidth, viewfinderHeight) => {
-            const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-            const qrboxSize = Math.floor(minEdgeSize * 0.75);
-            return {
-              width: qrboxSize,
-              height: qrboxSize
-            };
-          },
-          aspectRatio: 1.0,
-          rememberLastUsedCamera: true,
-          supportedScanTypes: [0], 
-        },
-        /* verbose= */ false
-      );
+      scannerRef.current = new Html5Qrcode("reader", { 
+        formatsToSupport: formats,
+        verbose: false 
+      });
 
-      scanner.render(
+      const config = mode === 'barcode' ? BARCODE_CONFIG : SCAN_CONFIG;
+
+      // Forced environment camera (back camera)
+      await scannerRef.current.start(
+        { facingMode: "environment" },
+        config,
         (decodedText, decodedResult) => {
           onScan(decodedText, decodedResult);
         },
-        (errorMessage) => {
-          // Frame scan failures are normal
+        () => {
+          // Failure is ignored as it happens every frame no result is found
         }
       );
 
-      scannerRef.current = scanner;
       setStatus('ready');
+      setIsCameraActive(true);
     } catch (err: any) {
-      console.error("Scanner init error:", err);
-      if (err?.toString().toLowerCase().includes("permission")) {
+      console.error("Scanner error:", err);
+      const msg = err?.toString().toLowerCase();
+      if (msg.includes("permission")) {
         setStatus('denied');
-        setErrorMsg("Camera access was denied. Please enable it in your browser settings.");
+        setErrorMsg("Camera access was denied.");
+      } else if (msg.includes("not found")) {
+        setStatus('unavailable');
+        setErrorMsg("No camera detected.");
       } else {
         setStatus('error');
-        setErrorMsg("An unexpected error occurred while starting the camera.");
+        setErrorMsg("Failed to start camera feed.");
       }
+    }
+  }, [mode, onScan, stopScanner]);
+
+  const handleFileScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !scannerRef.current) return;
+
+    setStatus('scanning_file');
+    try {
+      const result = await scannerRef.current.scanFile(file, true);
+      onScan(result, { decodedText: result });
+      setStatus('ready');
+    } catch (err) {
+      setErrorMsg("Could not find any code in this image.");
+      setStatus('error');
     }
   };
 
   useEffect(() => {
     startScanner();
-
-    // Inject styles for the library UI
-    const style = document.createElement('style');
-    style.innerHTML = `
-      #reader button {
-        background-color: #FF4444 !important;
-        color: white !important;
-        border: none !important;
-        padding: 10px 20px !important;
-        border-radius: 8px !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        text-transform: uppercase !important;
-        font-size: 12px !important;
-        letter-spacing: 1px !important;
-        cursor: pointer !important;
-        margin-top: 10px !important;
-        transition: all 0.2s !important;
-      }
-      #reader button:hover {
-        transform: scale(1.05) !important;
-        box-shadow: 0 0 20px rgba(255, 68, 68, 0.4) !important;
-      }
-      #reader img {
-        display: none !important;
-      }
-      #reader {
-        border: none !important;
-      }
-      #reader__scan_region {
-        background: transparent !important;
-      }
-      #reader__dashboard_section_csr button {
-        margin: 5px !important;
-      }
-    `;
-    document.head.appendChild(style);
-
     return () => {
-      document.head.removeChild(style);
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
-      }
+      stopScanner();
     };
-  }, [onScan]);
+  }, [startScanner, stopScanner]);
 
   return (
     <div className="flex flex-col items-center space-y-4 w-full max-w-md mx-auto">
-      <div className="relative w-full aspect-square bg-[#1a1c20] rounded-2xl overflow-hidden border-4 border-hw-card/40 shadow-2xl flex items-center justify-center">
-        {/* The reader div is always present but we control its visibility of the library UI vs our overlay */}
-        <div id="reader" className={cn("w-full h-full z-0", status !== 'ready' && "opacity-20")} />
+      <div className={cn(
+        "relative w-full rounded-3xl overflow-hidden border-4 border-hw-card shadow-2xl transition-all duration-500",
+        mode === 'qr' ? "aspect-square" : "aspect-[4/3] bg-black"
+      )}>
+        <div id="reader" className="w-full h-full" />
         
-        {/* Scanning Animation Overlay (Always visible or based on status) */}
+        {/* Viewfinder Overlays */}
         {status === 'ready' && (
           <div className="absolute inset-0 pointer-events-none z-10">
-            <div className="absolute top-0 left-0 w-full h-full border-[40px] border-hw-card/60" />
-            <motion.div 
-              animate={{ top: ['10%', '90%', '10%'] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-              className="absolute left-1/2 -translate-x-1/2 w-4/5 h-[2px] bg-hw-accent shadow-[0_0_15px_rgba(255,68,68,0.8)] z-20"
-            />
+            {mode === 'qr' ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-3/4 aspect-square border-2 border-hw-accent/50 rounded-2xl relative shadow-[0_0_0_1000px_rgba(0,0,0,0.6)]">
+                  <motion.div 
+                    animate={{ top: ['0%', '100%', '0%'] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                    className="absolute left-0 w-full h-[2px] bg-hw-accent shadow-[0_0_15px_rgba(255,68,68,1)]"
+                  />
+                  {/* Corners */}
+                  <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-hw-accent" />
+                  <div className="absolute -top-1 -right-1 w-6 h-6 border-t-2 border-r-2 border-hw-accent" />
+                  <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-2 border-l-2 border-hw-accent" />
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-2 border-r-2 border-hw-accent" />
+                </div>
+              </div>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-[85%] h-1/3 border-2 border-hw-accent/50 rounded-lg relative shadow-[0_0_0_1000px_rgba(0,0,0,0.6)]">
+                  <motion.div 
+                    animate={{ top: ['0%', '100%', '0%'] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="absolute left-0 w-full h-[2px] bg-hw-accent shadow-[0_0_15px_rgba(255,68,68,1)]"
+                  />
+                  {/* Horizontal indicators */}
+                  <div className="absolute top-1/2 -translate-y-1/2 left-4 right-4 h-0.5 bg-hw-accent/20 border-t border-dashed border-hw-accent" />
+                </div>
+              </div>
+            )}
           </div>
         )}
-        
+
         <AnimatePresence mode="wait">
-          {status === 'checking' && (
+          {(status === 'checking' || status === 'scanning_file') && (
             <motion.div
-              key="checking"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center space-y-4"
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
             >
               <div className="w-16 h-16 rounded-full border-4 border-hw-accent/20 border-t-hw-accent animate-spin flex items-center justify-center">
-                <Camera className="w-6 h-6 text-hw-accent" />
+                <RefreshCw className="w-6 h-6 text-hw-accent" />
               </div>
-              <div className="text-center space-y-2">
-                <span className="text-sm font-mono text-white uppercase tracking-[0.2em] font-bold block">Initializing Camera</span>
-                <p className="text-[10px] font-mono text-hw-secondary uppercase tracking-widest max-w-[200px] leading-relaxed">
-                  Please click "Allow" when the browser asks for camera access.
-                </p>
-              </div>
+              <p className="mt-4 text-xs font-mono text-white uppercase tracking-widest animate-pulse">
+                {status === 'checking' ? 'Connecting to Camera' : 'Processing Image'}
+              </p>
             </motion.div>
           )}
 
           {(status === 'denied' || status === 'unavailable' || status === 'error') && (
             <motion.div
-              key="error-state"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="p-8 text-center space-y-6 z-30 bg-hw-card/90 backdrop-blur-md rounded-2xl border border-white/10"
+              className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-hw-card p-8 text-center"
             >
               {status === 'denied' ? (
-                <ShieldAlert className="w-16 h-16 text-hw-accent mx-auto" />
+                <ShieldAlert className="w-16 h-16 text-hw-accent mb-4" />
               ) : (
-                <AlertCircle className="w-16 h-16 text-hw-accent mx-auto" />
+                <AlertCircle className="w-16 h-16 text-hw-accent mb-4" />
               )}
-              <div className="space-y-3">
-                <h3 className="text-white font-mono text-lg uppercase tracking-tighter font-bold">
-                  {status === 'denied' ? 'Access Blocked' : 'hardware Error'}
-                </h3>
-                <p className="text-hw-secondary text-[10px] font-mono leading-relaxed max-w-[200px] mx-auto">
-                  {errorMsg}
-                </p>
-              </div>
+              <h3 className="text-white font-mono text-sm uppercase font-bold mb-2">{status === 'denied' ? 'Access Denied' : 'HW Error'}</h3>
+              <p className="text-hw-secondary text-[10px] font-mono mb-6 uppercase leading-relaxed max-w-[200px]">
+                {errorMsg}
+              </p>
               <button
                 onClick={startScanner}
-                className="bg-hw-accent text-white px-4 py-2 rounded-lg text-[10px] font-mono uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                className="bg-hw-accent text-white px-6 py-2 rounded-xl text-[10px] font-mono uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all"
               >
-                Retry Connection
+                <RefreshCw className="w-4 h-4" /> Try Again
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Hardware overlays */}
+        {/* Live Feed Indicator */}
         {status === 'ready' && (
-          <>
-            <div className="absolute inset-0 pointer-events-none border border-hw-secondary/20 rounded-xl" />
-            <div className="absolute top-4 left-4 flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-hw-accent animate-pulse" />
-              <span className="text-[10px] font-mono text-hw-secondary uppercase tracking-widest">Live Feed</span>
+          <div className="absolute top-6 left-6 flex items-center gap-2 z-20">
+            <div className="w-2.5 h-2.5 rounded-full bg-hw-accent animate-pulse shadow-[0_0_10px_rgba(255,68,68,0.5)]" />
+            <span className="text-[10px] font-mono text-white/80 uppercase tracking-widest font-bold">SECURE_FEED</span>
+            <div className="ml-2 px-2 py-0.5 bg-hw-accent/20 rounded border border-hw-accent/30">
+              <span className="text-[8px] font-mono text-hw-accent uppercase">{mode}</span>
             </div>
-            <div className="absolute bottom-4 right-4">
-              <Camera className="w-4 h-4 text-hw-secondary opacity-50" />
-            </div>
-          </>
+          </div>
         )}
       </div>
 
+      <div className="w-full">
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full flex items-center justify-center gap-2 bg-hw-card text-white py-4 rounded-2xl text-[10px] font-mono uppercase tracking-widest hover:bg-hw-card/80 transition-all border border-white/5 shadow-xl shadow-black/20 group"
+        >
+          <ImageIcon className="w-5 h-5 text-hw-accent group-hover:scale-110 transition-transform" /> 
+          Upload Image to Scan
+        </button>
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          accept="image/*" 
+          onChange={handleFileScan} 
+        />
+      </div>
+
       <div className="text-center space-y-1">
-        <p className="text-xs font-mono text-hw-secondary uppercase tracking-tighter">
-          {status === 'ready' ? 'Position code within the frame' : 'Hardware Status Check'}
+        <p className="text-[10px] font-mono text-hw-secondary uppercase tracking-widest block opacity-60">
+          Hardware: Backend Camera Force-Active
         </p>
-        <p className="text-[10px] font-mono text-hw-secondary/60 uppercase">
-          {status === 'ready' ? 'Supports QR, Barcode, DataMatrix' : 'Awaiting camera initialization'}
+        <p className="text-[9px] font-mono text-hw-accent uppercase tracking-tighter">
+          Protocols: {mode === 'qr' ? 'ISO/IEC 18004' : 'EAN / UPC / CODE-128'}
         </p>
       </div>
     </div>
