@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
-import { Download, Type, QrCode, Barcode as BarcodeIcon, AlertTriangle } from 'lucide-react';
+import { Download, Type, QrCode, Barcode as BarcodeIcon, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { isValidBarcode } from '../lib/security';
 
 export default function Generator() {
-  const [text, setText] = useState('https://scanqoqrs.pro');
+  const [text, setText] = useState('https://scanOQRs.pro');
   const [type, setType] = useState<'qr' | 'barcode'>('qr');
 
   const isValid = useMemo(() => isValidBarcode(text, type), [text, type]);
@@ -24,12 +24,12 @@ export default function Generator() {
     const img = new Image();
     
     img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
+      canvas.width = img.width + 40; // Add padding
+      canvas.height = img.height + 40;
       if (ctx) {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 20, 20);
       }
       const pngFile = canvas.toDataURL('image/png');
       const downloadLink = document.createElement('a');
@@ -38,53 +38,59 @@ export default function Generator() {
       downloadLink.click();
     };
 
-    // Use Blob to handle UTF-8 characters safely
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
     img.src = url;
     
-    // Clean up URL after load starts
     setTimeout(() => URL.revokeObjectURL(url), 100);
   };
 
   return (
-    <div className="flex flex-col items-center space-y-6 w-full max-w-md mx-auto">
-      <div className="w-full space-y-4">
-        <div className="flex bg-hw-bg/50 p-1 rounded-2xl border border-white/5 shadow-inner">
+    <div className="flex flex-col items-center space-y-8 w-full max-w-md mx-auto relative z-10">
+      <div className="w-full space-y-6">
+        {/* Engine Toggle */}
+        <div className="glass-card p-1.5 rounded-[1.5rem] flex items-center relative gap-1">
           <button
             onClick={() => setType('qr')}
             className={cn(
-              "flex-1 flex items-center justify-center space-x-2 py-2.5 rounded-xl transition-all duration-300",
-              type === 'qr' ? "bg-hw-card text-white shadow-lg" : "text-hw-secondary hover:text-hw-card"
+              "flex-1 flex items-center justify-center space-x-2 py-3 rounded-[1.2rem] transition-all duration-500 relative z-10",
+              type === 'qr' ? "text-white" : "text-hw-secondary hover:text-white/60"
             )}
           >
             <QrCode className="w-4 h-4" />
-            <span className="text-[10px] font-mono uppercase tracking-widest font-bold">QR Engine</span>
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] font-bold">QR Engine</span>
+            {type === 'qr' && (
+              <motion.div layoutId="engine-bg" className="absolute inset-0 bg-hw-accent rounded-[1.2rem] -z-10 glow-accent" />
+            )}
           </button>
           <button
             onClick={() => setType('barcode')}
             className={cn(
-              "flex-1 flex items-center justify-center space-x-2 py-2.5 rounded-xl transition-all duration-300",
-              type === 'barcode' ? "bg-hw-card text-white shadow-lg" : "text-hw-secondary hover:text-hw-card"
+              "flex-1 flex items-center justify-center space-x-2 py-3 rounded-[1.2rem] transition-all duration-500 relative z-10",
+              type === 'barcode' ? "text-white" : "text-hw-secondary hover:text-white/60"
             )}
           >
             <BarcodeIcon className="w-4 h-4" />
-            <span className="text-[10px] font-mono uppercase tracking-widest font-bold">Barcode Engine</span>
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] font-bold">Codabar</span>
+            {type === 'barcode' && (
+              <motion.div layoutId="engine-bg" className="absolute inset-0 bg-hw-accent rounded-[1.2rem] -z-10 glow-accent" />
+            )}
           </button>
         </div>
 
+        {/* Dynamic Input */}
         <div className="relative group">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <Type className={cn("w-4 h-4 transition-colors", isValid ? "text-hw-secondary" : "text-red-500")} />
+          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+            <Type className={cn("w-4 h-4 transition-colors duration-300", isValid ? "text-hw-accent" : "text-red-500")} />
           </div>
           <input
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Enter text or URL..."
+            placeholder="Payload data..."
             className={cn(
-              "w-full bg-white border-2 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-mono transition-all outline-none",
-              isValid ? "border-hw-card/10 focus:border-hw-card shadow-sm" : "border-red-500/50 focus:border-red-500 bg-red-50 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+              "w-full bg-white/5 border border-white/10 rounded-[1.5rem] py-4.5 pl-14 pr-4 text-sm font-mono transition-all outline-none placeholder:text-hw-secondary/30",
+              isValid ? "focus:border-hw-accent/50 focus:bg-white/[0.08]" : "border-red-500/50 bg-red-500/5"
             )}
           />
           <AnimatePresence>
@@ -93,10 +99,10 @@ export default function Generator() {
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-red-500"
+                className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-red-500"
               >
                 <AlertTriangle className="w-4 h-4" />
-                <span className="text-[9px] font-mono uppercase font-black">Invalid Format</span>
+                <span className="text-[9px] font-mono uppercase font-black tracking-tighter">Corrupt Data</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -106,17 +112,23 @@ export default function Generator() {
       <motion.div
         layout
         className={cn(
-          "relative p-8 bg-white rounded-[2.5rem] shadow-2xl border-4 transition-colors duration-500 group",
-          isValid ? "border-hw-card" : "border-red-500 opacity-50 grayscale"
+          "relative p-10 bg-white rounded-[3rem] shadow-[0_0_80px_rgba(0,0,0,0.4)] transition-all duration-700 group",
+          !isValid && "opacity-40 grayscale blur-[2px]"
         )}
       >
-        <div id="generated-code" className="flex items-center justify-center min-h-[200px] min-w-[200px]">
+        <div className="absolute -top-3 -left-3 glass-card px-3 py-1.5 rounded-full flex items-center gap-1.5 glow-accent border-hw-accent/30">
+          <ShieldCheck className="w-3 h-3 text-hw-accent" />
+          <span className="text-[8px] font-mono text-hw-accent font-black uppercase">Secured_Output</span>
+        </div>
+
+        <div id="generated-code" className="flex items-center justify-center min-h-[220px] min-w-[220px]">
           {type === 'qr' ? (
             <QRCodeSVG
               value={text || ' '}
-              size={200}
+              size={220}
               level="H"
               includeMargin={false}
+              fgColor="#0A0A0B"
             />
           ) : (
             <div className="scale-125 px-4 overflow-hidden">
@@ -127,10 +139,11 @@ export default function Generator() {
                   height={80} 
                   fontSize={10}
                   background="transparent"
+                  lineColor="#0A0A0B"
                 />
               ) : (
                 <div className="w-40 h-20 bg-hw-bg/5 flex items-center justify-center rounded-lg border border-dashed border-red-300">
-                   <p className="text-[8px] font-mono text-red-400 uppercase">Input Unreadable</p>
+                   <p className="text-[8px] font-mono text-red-400 uppercase">Invalid Symbology</p>
                 </div>
               )}
             </div>
@@ -140,18 +153,20 @@ export default function Generator() {
         {isValid && (
           <button
             onClick={downloadCode}
-            className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-hw-accent text-white p-4 rounded-2xl shadow-xl hover:scale-110 active:scale-95 transition-all shadow-hw-accent/30 group-hover:rotate-6"
+            className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-hw-accent text-white p-5 rounded-[1.5rem] shadow-[0_15px_30px_rgba(255,61,61,0.4)] hover:scale-110 active:scale-95 transition-all glow-accent group-hover:rotate-3"
           >
-            <Download className="w-6 h-6" />
+            <Download className="w-7 h-7" />
           </button>
         )}
       </motion.div>
 
-      <div className="text-center space-y-1 pt-6">
-        <p className="text-[10px] font-mono text-hw-secondary uppercase tracking-[0.2em] font-bold">Pro Generator Hub</p>
-        <p className="text-[9px] font-mono text-hw-secondary/40 uppercase tracking-widest leading-relaxed">
-          {type === 'qr' ? 'Supports High-Capacity Encoded URIs' : 'Standard Linear Symbology Output'}
-        </p>
+      <div className="text-center space-y-2 pt-8">
+        <p className="text-[10px] font-mono text-hw-secondary/60 uppercase tracking-[0.4em] font-black">Cryptographic Hub v4.0</p>
+        <div className="flex items-center justify-center gap-4 opacity-30">
+          <div className="h-px w-8 bg-hw-secondary" />
+          <p className="text-[8px] font-mono text-hw-secondary uppercase">Alpha Protocol Active</p>
+          <div className="h-px w-8 bg-hw-secondary" />
+        </div>
       </div>
     </div>
   );

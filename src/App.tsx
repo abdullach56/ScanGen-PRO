@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import Scanner from './components/Scanner';
 import Generator from './components/Generator';
 import { cn } from './lib/utils';
-import { sanitizeUrl } from './lib/security';
+import { sanitizeUrl, isLink } from './lib/security';
 
 interface ScanHistoryItem {
   id: string;
@@ -73,27 +73,31 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-hw-bg shadow-2xl border-x border-hw-card/5">
+    <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-hw-bg shadow-[0_0_100px_rgba(0,0,0,0.8)] border-x border-white/5 relative overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute -top-[20%] -right-[20%] w-[60%] h-[40%] bg-hw-accent/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute -bottom-[10%] -left-[20%] w-[50%] h-[30%] bg-hw-accent/5 blur-[100px] rounded-full pointer-events-none" />
+
       {/* Header */}
-      <header className="p-6 pb-2 space-y-1">
+      <header className="p-8 pb-4 space-y-1 relative z-10">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-mono font-bold tracking-tighter uppercase flex items-center gap-2">
-            <div className="w-8 h-8 bg-hw-card rounded-lg flex items-center justify-center shadow-lg shadow-hw-accent/20">
+          <h1 className="text-2xl font-mono font-bold tracking-tighter uppercase flex items-center gap-3">
+            <div className="w-10 h-10 glass-card rounded-xl flex items-center justify-center glow-accent">
               {activeTab === 'barcode' ? (
-                <Barcode className="w-5 h-5 text-white" />
+                <Barcode className="w-6 h-6 text-hw-accent" />
               ) : (
-                <Scan className="w-5 h-5 text-white" />
+                <Scan className="w-6 h-6 text-hw-accent" />
               )}
             </div>
-            ScanOQRs<span className="text-hw-accent">Pro</span>
+            <span className="tracking-tight">ScanOQRs</span><span className="text-hw-accent">PRO</span>
           </h1>
           <div className="flex items-center gap-2">
-            <div className="px-2 py-1 bg-hw-card/5 rounded border border-hw-card/10">
-              <span className="text-[10px] font-mono text-hw-secondary uppercase tracking-widest">v1.1.0</span>
+            <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
+              <span className="text-[9px] font-mono text-hw-secondary uppercase tracking-[0.2em] font-bold">V1.2.0</span>
             </div>
           </div>
         </div>
-        <p className="text-[10px] font-mono text-hw-secondary uppercase tracking-widest opacity-60">Verified Security & Multi-Scan</p>
+        <p className="text-[10px] font-mono text-hw-secondary/60 uppercase tracking-[0.3em] pl-1">Quantum-Grade Scanning Hub</p>
       </header>
 
       {/* Main Content */}
@@ -192,22 +196,22 @@ export default function App() {
                         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => copyToClipboard(item.text, item.id)}
-                            className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                            className="p-2.5 glass-button rounded-xl"
                           >
                             {copiedId === item.id ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                              <CheckCircle2 className="w-4 h-4 text-green-400" />
                             ) : (
                               <Copy className="w-4 h-4 text-hw-secondary" />
                             )}
                           </button>
-                          {item.text.startsWith('http') && (
+                          {isLink(item.text) && (
                             <a
                               href={item.text}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                              className="p-2.5 glass-button rounded-xl group-hover:bg-hw-accent/20 transition-all"
                             >
-                              <ExternalLink className="w-4 h-4 text-hw-secondary" />
+                              <ExternalLink className="w-4 h-4 text-hw-accent" />
                             </a>
                           )}
                         </div>
@@ -274,44 +278,50 @@ function NavButton({ active, onClick, icon, label }: { active: boolean; onClick:
 }
 
 function ResultCard({ data, onClear }: { data: string; onClear: () => void }) {
+  const isWebLink = data.startsWith('http');
+  const isDeepLink = isLink(data) && !isWebLink;
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-hw-card text-white p-5 rounded-3xl shadow-2xl border border-white/10 space-y-4"
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      className="glass-card p-6 rounded-[2rem] space-y-5 relative overflow-hidden"
     >
+      <div className="absolute top-0 right-0 w-32 h-32 bg-hw-accent/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
+      
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-mono text-hw-secondary uppercase mb-1 tracking-widest">Scanned Result</p>
-          <p className="text-sm font-mono break-all leading-relaxed text-hw-accent">{data}</p>
-        </div>
-        <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center shrink-0 border border-green-500/20">
-          <CheckCircle2 className="w-6 h-6 text-green-400" />
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <p className="text-[10px] font-mono text-hw-secondary uppercase tracking-[0.2em] font-bold">Decoded Protocol</p>
+          </div>
+          <p className="text-sm font-mono break-all leading-relaxed text-white bg-white/5 p-3 rounded-xl border border-white/5">{data}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {data.startsWith('http') && (
+        {isLink(data) && (
           <a
             href={data}
             target="_blank"
             rel="noopener noreferrer"
-            className="col-span-2 flex items-center justify-center gap-2 bg-hw-accent hover:bg-hw-accent/80 text-white py-3 rounded-xl text-xs font-mono uppercase tracking-widest transition-all shadow-lg shadow-hw-accent/20"
+            className="col-span-2 flex items-center justify-center gap-2 bg-hw-accent hover:bg-hw-accent/80 text-white py-4 rounded-2xl text-[11px] font-mono uppercase tracking-[0.2em] font-bold transition-all glow-accent active:scale-[0.98]"
           >
-            <ExternalLink className="w-4 h-4" /> Open Link
+            <ExternalLink className="w-4 h-4" /> 
+            {isDeepLink ? 'Open Secure App' : 'Open Link'}
           </a>
         )}
         <button
           onClick={() => navigator.clipboard.writeText(data)}
-          className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest transition-all border border-white/5"
+          className="flex items-center justify-center gap-2 glass-button text-white py-4 rounded-2xl text-[10px] font-mono uppercase tracking-widest font-bold"
         >
-          <Copy className="w-4 h-4" /> Copy
+          <Copy className="w-4 h-4 text-hw-secondary" /> Copy
         </button>
         <button
           onClick={onClear}
-          className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest transition-all border border-white/5"
+          className="flex items-center justify-center gap-2 glass-button text-white py-4 rounded-2xl text-[10px] font-mono uppercase tracking-widest font-bold"
         >
-          <Scan className="w-4 h-4" /> Dismiss
+          <Scan className="w-4 h-4 text-hw-secondary" /> Dismiss
         </button>
       </div>
     </motion.div>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { Camera, RefreshCw, AlertCircle, ShieldAlert, Image as ImageIcon, Smartphone } from 'lucide-react';
+import { Camera, RefreshCw, AlertCircle, ShieldAlert, Image as ImageIcon, Smartphone, Cpu } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 
@@ -12,7 +12,7 @@ interface ScannerProps {
 type CameraStatus = 'checking' | 'ready' | 'denied' | 'unavailable' | 'error' | 'scanning_file';
 
 const SCAN_CONFIG = {
-  fps: 10,
+  fps: 15,
   qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
     const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
     const qrboxSize = Math.floor(minEdgeSize * 0.7);
@@ -25,11 +25,11 @@ const SCAN_CONFIG = {
 };
 
 const BARCODE_CONFIG = {
-  fps: 10,
+  fps: 15,
   qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
     return {
-      width: Math.floor(viewfinderWidth * 0.8),
-      height: Math.floor(viewfinderHeight * 0.3)
+      width: Math.floor(viewfinderWidth * 0.85),
+      height: Math.floor(viewfinderHeight * 0.35)
     };
   },
   aspectRatio: 1.0,
@@ -73,9 +73,7 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
       if (scannerRef.current) {
         try {
           await scannerRef.current.clear();
-        } catch (e) {
-          // ignore
-        }
+        } catch (e) { /* ignore */ }
       }
 
       scannerRef.current = new Html5Qrcode("reader", { 
@@ -85,16 +83,13 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
 
       const config = mode === 'barcode' ? BARCODE_CONFIG : SCAN_CONFIG;
 
-      // Forced environment camera (back camera)
       await scannerRef.current.start(
         { facingMode: "environment" },
         config,
         (decodedText, decodedResult) => {
           onScan(decodedText, decodedResult);
         },
-        () => {
-          // Failure is ignored as it happens every frame no result is found
-        }
+        () => { /* empty failure callback */ }
       );
 
       setStatus('ready');
@@ -125,7 +120,7 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
       onScan(result, { decodedText: result });
       setStatus('ready');
     } catch (err) {
-      setErrorMsg("Could not find any code in this image.");
+      setErrorMsg("No readable matrix detected.");
       setStatus('error');
     }
   };
@@ -138,44 +133,45 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
   }, [startScanner, stopScanner]);
 
   return (
-    <div className="flex flex-col items-center space-y-4 w-full max-w-md mx-auto">
+    <div className="flex flex-col items-center space-y-6 w-full max-w-md mx-auto">
       <div className={cn(
-        "relative w-full rounded-3xl overflow-hidden border-4 border-hw-card shadow-2xl transition-all duration-500",
-        mode === 'qr' ? "aspect-square" : "aspect-[4/3] bg-black"
+        "relative w-full rounded-[2.5rem] overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-700",
+        mode === 'qr' ? "aspect-square" : "aspect-[4/3] bg-[#050505]"
       )}>
-        <div id="reader" className="w-full h-full" />
+        <div id="reader" className="w-full h-full object-cover" />
         
-        {/* Viewfinder Overlays */}
+        {/* HUD Overlay */}
         {status === 'ready' && (
           <div className="absolute inset-0 pointer-events-none z-10">
-            {mode === 'qr' ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-3/4 aspect-square border-2 border-hw-accent/50 rounded-2xl relative shadow-[0_0_0_1000px_rgba(0,0,0,0.6)]">
-                  <motion.div 
-                    animate={{ top: ['0%', '100%', '0%'] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                    className="absolute left-0 w-full h-[2px] bg-hw-accent shadow-[0_0_15px_rgba(255,68,68,1)]"
-                  />
-                  {/* Corners */}
-                  <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-hw-accent" />
-                  <div className="absolute -top-1 -right-1 w-6 h-6 border-t-2 border-r-2 border-hw-accent" />
-                  <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-2 border-l-2 border-hw-accent" />
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-2 border-r-2 border-hw-accent" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className={cn(
+                "border-2 border-hw-accent/30 rounded-3xl relative transition-all duration-500",
+                mode === 'qr' ? "w-3/4 aspect-square" : "w-[85%] h-[40%]"
+              )}>
+                {/* HUD Corners */}
+                <div className="absolute -top-1 -left-1 w-12 h-12 border-t-4 border-l-4 border-hw-accent glow-accent rounded-tl-2xl" />
+                <div className="absolute -top-1 -right-1 w-12 h-12 border-t-4 border-r-4 border-hw-accent glow-accent rounded-tr-2xl" />
+                <div className="absolute -bottom-1 -left-1 w-12 h-12 border-b-4 border-l-4 border-hw-accent glow-accent rounded-bl-2xl" />
+                <div className="absolute -bottom-1 -right-1 w-12 h-12 border-b-4 border-r-4 border-hw-accent glow-accent rounded-br-2xl" />
+
+                {/* Scanning Line */}
+                <motion.div 
+                  animate={{ top: ['0%', '100%', '0%'] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute left-1/2 -translate-x-1/2 w-[90%] h-[2px] bg-hw-accent glow-accent opacity-60"
+                />
+
+                {/* HUD Data Text */}
+                <div className="absolute -bottom-12 left-0 right-0 flex justify-between px-2 text-[8px] font-mono text-hw-accent/60 uppercase tracking-widest">
+                  <span>X_{Math.random().toString(16).slice(2, 6)}</span>
+                  <span>PROC_EN_AUTO</span>
+                  <span>Y_{Math.random().toString(16).slice(2, 6)}</span>
                 </div>
               </div>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-[85%] h-1/3 border-2 border-hw-accent/50 rounded-lg relative shadow-[0_0_0_1000px_rgba(0,0,0,0.6)]">
-                  <motion.div 
-                    animate={{ top: ['0%', '100%', '0%'] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    className="absolute left-0 w-full h-[2px] bg-hw-accent shadow-[0_0_15px_rgba(255,68,68,1)]"
-                  />
-                  {/* Horizontal indicators */}
-                  <div className="absolute top-1/2 -translate-y-1/2 left-4 right-4 h-0.5 bg-hw-accent/20 border-t border-dashed border-hw-accent" />
-                </div>
-              </div>
-            )}
+            </div>
+            
+            {/* Ambient vignette */}
+            <div className="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]" />
           </div>
         )}
 
@@ -185,13 +181,14 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-hw-bg/90 backdrop-blur-md"
             >
-              <div className="w-16 h-16 rounded-full border-4 border-hw-accent/20 border-t-hw-accent animate-spin flex items-center justify-center">
-                <RefreshCw className="w-6 h-6 text-hw-accent" />
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full border-2 border-hw-accent/10 border-t-hw-accent animate-spin" />
+                <Cpu className="absolute inset-0 m-auto w-8 h-8 text-hw-accent animate-pulse" />
               </div>
-              <p className="mt-4 text-xs font-mono text-white uppercase tracking-widest animate-pulse">
-                {status === 'checking' ? 'Connecting to Camera' : 'Processing Image'}
+              <p className="mt-6 text-[10px] font-mono text-white uppercase tracking-[0.4em] animate-pulse pl-1">
+                {status === 'checking' ? 'Initializing Core' : 'Parsing Matrix'}
               </p>
             </motion.div>
           )}
@@ -200,34 +197,36 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-hw-card p-8 text-center"
+              className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-hw-card/95 p-10 text-center backdrop-blur-lg"
             >
-              {status === 'denied' ? (
-                <ShieldAlert className="w-16 h-16 text-hw-accent mb-4" />
-              ) : (
-                <AlertCircle className="w-16 h-16 text-hw-accent mb-4" />
-              )}
-              <h3 className="text-white font-mono text-sm uppercase font-bold mb-2">{status === 'denied' ? 'Access Denied' : 'HW Error'}</h3>
-              <p className="text-hw-secondary text-[10px] font-mono mb-6 uppercase leading-relaxed max-w-[200px]">
+              <div className="w-20 h-20 glass-card rounded-full flex items-center justify-center mb-6 glow-accent border-hw-accent/20">
+                {status === 'denied' ? (
+                  <ShieldAlert className="w-10 h-10 text-hw-accent" />
+                ) : (
+                  <AlertCircle className="w-10 h-10 text-hw-accent" />
+                )}
+              </div>
+              <h3 className="text-white font-mono text-sm uppercase font-bold mb-3 tracking-widest">{status === 'denied' ? 'Access Denied' : 'System Error'}</h3>
+              <p className="text-hw-secondary text-[10px] font-mono mb-8 uppercase leading-relaxed max-w-[240px] tracking-tight">
                 {errorMsg}
               </p>
               <button
                 onClick={startScanner}
-                className="bg-hw-accent text-white px-6 py-2 rounded-xl text-[10px] font-mono uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all"
+                className="bg-hw-accent text-white px-8 py-3 rounded-2xl text-[10px] font-mono uppercase tracking-[0.3em] font-bold glow-accent hover:scale-105 active:scale-95 transition-all"
               >
-                <RefreshCw className="w-4 h-4" /> Try Again
+                Re-Initialize
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Live Feed Indicator */}
+        {/* HUD Indicators */}
         {status === 'ready' && (
-          <div className="absolute top-6 left-6 flex items-center gap-2 z-20">
-            <div className="w-2.5 h-2.5 rounded-full bg-hw-accent animate-pulse shadow-[0_0_10px_rgba(255,68,68,0.5)]" />
-            <span className="text-[10px] font-mono text-white/80 uppercase tracking-widest font-bold">SECURE_FEED</span>
-            <div className="ml-2 px-2 py-0.5 bg-hw-accent/20 rounded border border-hw-accent/30">
-              <span className="text-[8px] font-mono text-hw-accent uppercase">{mode}</span>
+          <div className="absolute top-8 left-8 flex items-center gap-3 z-20">
+            <div className="w-2 h-2 rounded-full bg-hw-accent animate-ping glow-accent" />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-mono text-white uppercase tracking-[0.2em] font-black leading-none mb-1">Live_Feed_ON</span>
+               <span className="text-[8px] font-mono text-hw-accent uppercase opacity-60">Mode: {mode.toUpperCase()}</span>
             </div>
           </div>
         )}
@@ -236,10 +235,10 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
       <div className="w-full">
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="w-full flex items-center justify-center gap-2 bg-hw-card text-white py-4 rounded-2xl text-[10px] font-mono uppercase tracking-widest hover:bg-hw-card/80 transition-all border border-white/5 shadow-xl shadow-black/20 group"
+          className="w-full flex items-center justify-center gap-3 glass-button text-white py-5 rounded-[2rem] text-[11px] font-mono uppercase tracking-[0.2em] font-bold group"
         >
-          <ImageIcon className="w-5 h-5 text-hw-accent group-hover:scale-110 transition-transform" /> 
-          Upload Image to Scan
+          <ImageIcon className="w-5 h-5 text-hw-accent group-hover:scale-110 transition-transform glow-accent" /> 
+          Upload Encoded Image
         </button>
         <input 
           type="file" 
@@ -250,12 +249,12 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
         />
       </div>
 
-      <div className="text-center space-y-1">
-        <p className="text-[10px] font-mono text-hw-secondary uppercase tracking-widest block opacity-60">
-          Hardware: Backend Camera Force-Active
+      <div className="text-center space-y-1.5 pt-2">
+        <p className="text-[9px] font-mono text-hw-secondary uppercase tracking-[0.3em] font-bold opacity-40">
+          Hardware Interface active :: Back_Cam
         </p>
-        <p className="text-[9px] font-mono text-hw-accent uppercase tracking-tighter">
-          Protocols: {mode === 'qr' ? 'ISO/IEC 18004' : 'EAN / UPC / CODE-128'}
+        <p className="text-[8px] font-mono text-hw-accent/40 uppercase tracking-[0.1em]">
+          Standard: {mode === 'qr' ? 'ISO/IEC 18004 Matrix' : 'EAN-13 / UPC / LINEAR_SYM'}
         </p>
       </div>
     </div>

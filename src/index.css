@@ -1,19 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-hw-bg: #E6E6E6;
-  --color-hw-card: #151619;
-  --color-hw-accent: #FF4444;
-  --color-hw-secondary: #8E9299;
+  --color-hw-bg: #0A0A0B;
+  --color-hw-card: #141417;
+  --color-hw-accent: #FF3D3D;
+  --color-hw-accent-muted: #FF3D3D22;
+  --color-hw-secondary: #94949E;
+  --color-hw-border: #FFFFFF0A;
 }
 
 @layer base {
   body {
-    @apply bg-hw-bg text-hw-card font-sans antialiased;
+    @apply bg-hw-bg text-white font-sans antialiased selection:bg-hw-accent selection:text-white;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-hw-card/80 backdrop-blur-xl border border-hw-border shadow-[0_8px_32px_rgba(0,0,0,0.5)];
+  }
+  
+  .glass-button {
+    @apply bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/5 transition-all duration-300 active:scale-95;
+  }
+
+  .glow-accent {
+    @apply shadow-[0_0_20px_rgba(255,61,61,0.3)];
   }
 }
 
