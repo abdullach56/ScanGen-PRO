@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Scangen-pro</string>
+    <string name="title_activity_main">Scangen-pro</string>
+    <string name="package_name">com.scangen.pro</string>
+    <string name="custom_url_scheme">com.scangen.pro</string>
+</resources>
