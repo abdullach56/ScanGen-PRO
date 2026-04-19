@@ -54,6 +54,9 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
   }, []);
 
   const startScanner = useCallback(async () => {
+    // Small delay to ensure DOM is ready and any previous instances are cleared
+    await new Promise(r => setTimeout(r, 100));
+    
     await stopScanner();
     setStatus('checking');
     setErrorMsg(null);
@@ -83,29 +86,44 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
 
       const config = mode === 'barcode' ? BARCODE_CONFIG : SCAN_CONFIG;
 
-      await scannerRef.current.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText, decodedResult) => {
-          onScan(decodedText, decodedResult);
-        },
-        () => { /* empty failure callback */ }
-      );
+      // Try back camera first
+      try {
+        await scannerRef.current.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText, decodedResult) => {
+            onScan(decodedText, decodedResult);
+          },
+          () => { /* empty failure callback */ }
+        );
+      } catch (e) {
+        console.warn("Environment camera failed, trying any available camera...", e);
+        // Fallback to any camera
+        await scannerRef.current.start(
+          { facingMode: "user" }, // Fallback to front or default
+          config,
+          (decodedText, decodedResult) => {
+            onScan(decodedText, decodedResult);
+          },
+          () => { /* empty failure callback */ }
+        );
+      }
 
       setStatus('ready');
       setIsCameraActive(true);
     } catch (err: any) {
       console.error("Scanner error:", err);
-      const msg = err?.toString().toLowerCase();
-      if (msg.includes("permission")) {
+      const errorStr = String(err).toLowerCase();
+      
+      if (errorStr.includes("permission") || errorStr.includes("notallowederror")) {
         setStatus('denied');
-        setErrorMsg("Camera access was denied.");
-      } else if (msg.includes("not found")) {
+        setErrorMsg("Camera access denied. Please allow camera permissions in app settings to use the scanner.");
+      } else if (errorStr.includes("not found") || errorStr.includes("notfounderror") || errorStr.includes("nodescriptorerror")) {
         setStatus('unavailable');
-        setErrorMsg("No camera detected.");
+        setErrorMsg("No camera detected or camera interface is busy.");
       } else {
         setStatus('error');
-        setErrorMsg("Failed to start camera feed.");
+        setErrorMsg("System failed to initialize hardware interface.");
       }
     }
   }, [mode, onScan, stopScanner]);
