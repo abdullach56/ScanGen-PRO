@@ -51,7 +51,7 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
           </span>
           <br />
           <span className="text-hw-accent relative">
-            Instant Payment.
+            Instant QR-GEN.
             <div className="absolute -right-10 top-0 hidden md:block">
               <ShieldCheck className="w-8 h-8 text-green-500 opacity-80" />
             </div>
