@@ -25,15 +25,21 @@ export default function WebApp({ onBack }: WebAppProps) {
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('scan-history-v2');
-    if (saved) setHistory(JSON.parse(saved));
-    else {
-      const old = localStorage.getItem('scan-history');
-      if (old) {
-        const parsed = JSON.parse(old).map((item: any) => ({ ...item, type: 'QR' }));
-        setHistory(parsed);
-        localStorage.setItem('scan-history-v2', JSON.stringify(parsed));
+    try {
+      const saved = localStorage.getItem('scan-history-v2');
+      if (saved) {
+        setHistory(JSON.parse(saved));
+      } else {
+        const old = localStorage.getItem('scan-history');
+        if (old) {
+          const parsed = JSON.parse(old).map((item: any) => ({ ...item, type: 'QR' }));
+          setHistory(parsed);
+          localStorage.setItem('scan-history-v2', JSON.stringify(parsed));
+        }
       }
+    } catch (error) {
+      console.error("Failed to load history:", error);
+      setHistory([]);
     }
   }, []);
 

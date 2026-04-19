@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Camera, RefreshCw, AlertCircle, ShieldAlert, Image as ImageIcon, Smartphone, Cpu } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '@/src/lib/utils';
+import { cn } from '../lib/utils';
 
 interface ScannerProps {
   onScan: (decodedText: string, decodedResult: any) => void;
@@ -53,15 +53,20 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
     }
   }, []);
 
-  const startScanner = useCallback(async () => {
-    // Small delay to ensure DOM is ready and any previous instances are cleared
-    await new Promise(r => setTimeout(r, 100));
-    
-    await stopScanner();
-    setStatus('checking');
-    setErrorMsg(null);
+  const isInitializing = useRef(false);
 
+  const startScanner = useCallback(async () => {
+    if (isInitializing.current) return;
+    isInitializing.current = true;
+    
     try {
+      if (scannerRef.current?.isScanning) {
+        await scannerRef.current.stop();
+      }
+      
+      setStatus('checking');
+      setErrorMsg(null);
+
       const formats = mode === 'barcode' 
         ? [
             Html5QrcodeSupportedFormats.EAN_13,
@@ -73,11 +78,14 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
           ]
         : [Html5QrcodeSupportedFormats.QR_CODE];
 
-      if (scannerRef.current) {
-        try {
-          await scannerRef.current.clear();
-        } catch (e) { /* ignore */ }
+      // Ensure clean state and existence
+      const element = document.getElementById("reader");
+      if (!element) {
+        console.error("Scanner element not found in DOM");
+        isInitializing.current = false;
+        return;
       }
+      element.innerHTML = "";
 
       scannerRef.current = new Html5Qrcode("reader", { 
         formatsToSupport: formats,
@@ -86,7 +94,7 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
 
       const config = mode === 'barcode' ? BARCODE_CONFIG : SCAN_CONFIG;
 
-      // Try back camera first
+      // Primary attempt: Environment camera
       try {
         await scannerRef.current.start(
           { facingMode: "environment" },
@@ -94,39 +102,37 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
           (decodedText, decodedResult) => {
             onScan(decodedText, decodedResult);
           },
-          () => { /* empty failure callback */ }
+          () => {}
         );
       } catch (e) {
-        console.warn("Environment camera failed, trying any available camera...", e);
-        // Fallback to any camera
+        console.warn("Back camera failed, trying fallback...", e);
         await scannerRef.current.start(
-          { facingMode: "user" }, // Fallback to front or default
+          { facingMode: "user" },
           config,
           (decodedText, decodedResult) => {
             onScan(decodedText, decodedResult);
           },
-          () => { /* empty failure callback */ }
+          () => {}
         );
       }
 
       setStatus('ready');
       setIsCameraActive(true);
     } catch (err: any) {
-      console.error("Scanner error:", err);
+      console.error("Scanner startup error:", err);
       const errorStr = String(err).toLowerCase();
       
-      if (errorStr.includes("permission") || errorStr.includes("notallowederror")) {
+      if (errorStr.includes("permission") || errorStr.includes("notallowed")) {
         setStatus('denied');
-        setErrorMsg("Camera access denied. Please allow camera permissions in app settings to use the scanner.");
-      } else if (errorStr.includes("not found") || errorStr.includes("notfounderror") || errorStr.includes("nodescriptorerror")) {
-        setStatus('unavailable');
-        setErrorMsg("No camera detected or camera interface is busy.");
+        setErrorMsg("Camera access denied. Please enable permission in settings.");
       } else {
         setStatus('error');
-        setErrorMsg("System failed to initialize hardware interface.");
+        setErrorMsg("Failed to connect to hardware sensor.");
       }
+    } finally {
+      isInitializing.current = false;
     }
-  }, [mode, onScan, stopScanner]);
+  }, [mode, onScan]);
 
   const handleFileScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -208,6 +214,18 @@ export default function Scanner({ onScan, mode = 'qr' }: ScannerProps) {
               <p className="mt-6 text-[10px] font-mono text-white uppercase tracking-[0.4em] animate-pulse pl-1">
                 {status === 'checking' ? 'Initializing Core' : 'Parsing Matrix'}
               </p>
+              
+              {status === 'checking' && (
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 5 }}
+                  onClick={() => window.location.reload()}
+                  className="mt-8 text-[9px] font-mono text-hw-accent uppercase tracking-widest border border-hw-accent/20 px-4 py-2 rounded-full hover:bg-hw-accent/10 transition-colors"
+                >
+                  Taking too long? Tap to Rescue
+                </motion.button>
+              )}
             </motion.div>
           )}
 
