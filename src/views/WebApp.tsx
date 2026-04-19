@@ -235,8 +235,8 @@ export default function WebApp({ onBack }: WebAppProps) {
               </div>
               <div className="space-y-3 pt-2">
                 <a 
-                  href="/scangen-pro.apk" 
-                  download 
+                  href="https://abdullach56.github.io/ScanGen-PRO/scangen-pro.apk" 
+                  download="scangen-pro.apk"
                   className="block w-full bg-hw-accent hover:bg-hw-accent/80 text-white font-bold py-4 rounded-2xl text-[11px] uppercase tracking-widest transition-all glow-accent active:scale-95"
                 >
                   Download APK

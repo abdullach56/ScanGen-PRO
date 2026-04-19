@@ -74,8 +74,8 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
           <a 
-            href="/scangen-pro.apk" 
-            download 
+            href="https://abdullach56.github.io/ScanGen-PRO/scangen-pro.apk" 
+            download="scangen-pro.apk"
             className="w-full sm:w-auto flex items-center justify-center gap-3 bg-hw-accent text-white px-10 py-5 rounded-2xl font-bold text-sm hover:brightness-110 transition-all active:scale-[0.98] shadow-[0_10px_30px_rgba(59,130,246,0.3)]"
           >
             <Download className="w-5 h-5" /> Download for Android
