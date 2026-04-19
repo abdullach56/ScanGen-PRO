@@ -1,5 +1,5 @@
 /**
- * Security utilities for ScanOQRs Pro
+ * Security utilities for ScanGen-PRO
  */
 
 export const sanitizeUrl = (url: string): string | null => {

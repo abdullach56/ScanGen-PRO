@@ -7,7 +7,7 @@ import { cn } from '@/src/lib/utils';
 import { isValidBarcode } from '../lib/security';
 
 export default function Generator() {
-  const [text, setText] = useState('https://scanOQRs.pro');
+  const [text, setText] = useState('https://scangen-pro.com');
   const [type, setType] = useState<'qr' | 'barcode'>('qr');
 
   const isValid = useMemo(() => isValidBarcode(text, type), [text, type]);
@@ -33,7 +33,7 @@ export default function Generator() {
       }
       const pngFile = canvas.toDataURL('image/png');
       const downloadLink = document.createElement('a');
-      downloadLink.download = `ScanOQRsPro-${type}-${Date.now()}.png`;
+      downloadLink.download = `ScanGenPRO-${type}-${Date.now()}.png`;
       downloadLink.href = pngFile;
       downloadLink.click();
     };
@@ -153,7 +153,7 @@ export default function Generator() {
         {isValid && (
           <button
             onClick={downloadCode}
-            className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-hw-accent text-white p-5 rounded-[1.5rem] shadow-[0_15px_30px_rgba(255,61,61,0.4)] hover:scale-110 active:scale-95 transition-all glow-accent group-hover:rotate-3"
+            className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-hw-accent text-white p-5 rounded-[1.5rem] shadow-[0_15px_30px_rgba(59,130,246,0.4)] hover:scale-110 active:scale-95 transition-all glow-accent group-hover:rotate-3"
           >
             <Download className="w-7 h-7" />
           </button>
