@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import LandingPage from './views/LandingPage';
 import WebApp from './views/WebApp';
 
 export default function App() {
-  const [view, setView] = useState<'landing' | 'webapp'>('landing');
+  const [view, setView] = useState<'landing' | 'webapp'>(
+    Capacitor.isNativePlatform() ? 'webapp' : 'landing'
+  );
 
   // Handle browser back button or direct navigation if needed
   useEffect(() => {
