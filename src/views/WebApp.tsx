@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Scan, PlusCircle, History, Trash2, Copy, ExternalLink, CheckCircle2, Barcode, Download, ChevronLeft } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Scan, PlusCircle, History, Trash2, Copy, ExternalLink, CheckCircle2, Barcode, Download, ChevronLeft, MessageSquare, Send, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Scanner from '../components/Scanner';
 import Generator from '../components/Generator';
@@ -23,6 +24,8 @@ export default function WebApp({ onBack }: WebAppProps) {
   const [lastScanned, setLastScanned] = useState<{ text: string; type: 'QR' | 'Barcode' } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
 
   useEffect(() => {
     try {
@@ -79,11 +82,20 @@ export default function WebApp({ onBack }: WebAppProps) {
   };
 
   const handleTabChange = (tab: 'scan' | 'barcode' | 'generate' | 'history') => {
-    if (tab === 'barcode' || tab === 'generate') {
+    if ((tab === 'barcode' || tab === 'generate') && !Capacitor.isNativePlatform()) {
       setShowPrompt(true);
       return;
     }
     setActiveTab(tab);
+  };
+
+  const sendFeedback = () => {
+    if (!feedbackText.trim()) return;
+    const subject = encodeURIComponent('ScanGen-PRO Feedback');
+    const body = encodeURIComponent(feedbackText);
+    window.location.href = `mailto:charoliyaabdulla3@gmail.com?subject=${subject}&body=${body}`;
+    setShowFeedback(false);
+    setFeedbackText('');
   };
 
   return (
@@ -103,6 +115,13 @@ export default function WebApp({ onBack }: WebAppProps) {
             <span className="text-[10px] font-mono uppercase tracking-widest font-bold">Exit Demo</span>
           </button>
           <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowFeedback(true)}
+              className="p-2 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all text-hw-accent glow-accent"
+              title="Give Feedback"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
             <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
               <span className="text-[9px] font-mono text-hw-secondary uppercase tracking-[0.2em] font-bold">V1.2.0</span>
             </div>
@@ -254,6 +273,64 @@ export default function WebApp({ onBack }: WebAppProps) {
                   Maybe Later
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Feedback Modal */}
+      <AnimatePresence>
+        {showFeedback && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="glass-card p-8 rounded-[2.5rem] max-w-md w-full space-y-6 shadow-2xl relative border border-white/10"
+            >
+              <button 
+                onClick={() => setShowFeedback(false)}
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-hw-secondary transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-16 h-16 bg-hw-accent/10 rounded-2xl flex items-center justify-center glow-accent">
+                <MessageSquare className="w-8 h-8 text-hw-accent" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold tracking-tight text-white">Share Your Feedback</h3>
+                <p className="text-xs text-hw-secondary leading-relaxed">
+                  Notice a bug or want a new feature? Tell us how we can improve ScanGen-PRO.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <textarea 
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  placeholder="Type your message here..."
+                  className="w-full h-32 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-mono text-white outline-none focus:border-hw-accent/50 transition-all placeholder:text-hw-secondary/30 resize-none"
+                />
+                
+                <button 
+                  onClick={sendFeedback}
+                  disabled={!feedbackText.trim()}
+                  className="w-full flex items-center justify-center gap-3 bg-hw-accent disabled:opacity-50 disabled:cursor-not-allowed hover:bg-hw-accent/80 text-white font-bold py-4 rounded-2xl text-[11px] uppercase tracking-widest transition-all glow-accent active:scale-95 shadow-xl"
+                >
+                  <Send className="w-4 h-4" /> Send Feedback
+                </button>
+              </div>
+
+              <p className="text-[9px] font-mono text-hw-secondary/40 text-center uppercase tracking-widest">
+                This will open your email client
+              </p>
             </motion.div>
           </motion.div>
         )}
