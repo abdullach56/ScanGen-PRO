@@ -1,22 +1,20 @@
 import { useState, useMemo, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import Barcode from 'react-barcode';
-import { Download, Type, QrCode, Barcode as BarcodeIcon, AlertTriangle, ShieldCheck, Upload, X } from 'lucide-react';
+import { Download, Type, QrCode, AlertTriangle, ShieldCheck, Upload, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
-import { isValidBarcode } from '../lib/security';
+import { isValidQR } from '../lib/security';
 
 const PRESET_COLORS = ['#0A0A0B', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 export default function Generator() {
   const [text, setText] = useState('https://scangen-pro.com');
-  const [type, setType] = useState<'qr' | 'barcode'>('qr');
   const [fgColor, setFgColor] = useState('#0A0A0B');
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isValid = useMemo(() => isValidBarcode(text, type), [text, type]);
+  const isValid = useMemo(() => isValidQR(text), [text]);
 
   const autoLogoUrl = useMemo(() => {
     if (logoBase64) return logoBase64;
@@ -51,12 +49,8 @@ export default function Generator() {
   const downloadCode = () => {
     if (!isValid) return;
     
-    // For QR Code, SVG inside Generator
     const svg = document.getElementById('generated-code')?.querySelector('svg');
-    if (!svg) {
-        // Fallback for barcode if SVG is not used directly (react-barcode uses SVG internally)
-        return;
-    }
+    if (!svg) return;
 
     const svgData = new XMLSerializer().serializeToString(svg);
     const canvas = document.createElement('canvas');
@@ -76,7 +70,7 @@ export default function Generator() {
       }
       const pngFile = canvas.toDataURL('image/png');
       const downloadLink = document.createElement('a');
-      downloadLink.download = `ScanGenPRO-${type}-${Date.now()}.png`;
+      downloadLink.download = `ScanGenPRO-qr-${Date.now()}.png`;
       downloadLink.href = pngFile;
       downloadLink.click();
     };
@@ -90,34 +84,12 @@ export default function Generator() {
   return (
     <div className="flex flex-col items-center space-y-8 w-full max-w-md mx-auto relative z-10 pb-20">
       <div className="w-full space-y-6">
-        {/* Engine Toggle */}
-        <div className="glass-card p-1.5 rounded-[1.5rem] flex items-center relative gap-1">
-          <button
-            onClick={() => setType('qr')}
-            className={cn(
-              "flex-1 flex items-center justify-center space-x-2 py-3 rounded-[1.2rem] transition-all duration-500 relative z-10",
-              type === 'qr' ? "text-white" : "text-hw-secondary hover:text-white/60"
-            )}
-          >
-            <QrCode className="w-4 h-4" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] font-bold">QR Engine</span>
-            {type === 'qr' && (
-              <motion.div layoutId="engine-bg" className="absolute inset-0 bg-hw-accent rounded-[1.2rem] -z-10 glow-accent" />
-            )}
-          </button>
-          <button
-            onClick={() => setType('barcode')}
-            className={cn(
-              "flex-1 flex items-center justify-center space-x-2 py-3 rounded-[1.2rem] transition-all duration-500 relative z-10",
-              type === 'barcode' ? "text-white" : "text-hw-secondary hover:text-white/60"
-            )}
-          >
-            <BarcodeIcon className="w-4 h-4" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] font-bold">Codabar</span>
-            {type === 'barcode' && (
-              <motion.div layoutId="engine-bg" className="absolute inset-0 bg-hw-accent rounded-[1.2rem] -z-10 glow-accent" />
-            )}
-          </button>
+        {/* Header Label */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-hw-accent/10 rounded-xl flex items-center justify-center">
+            <QrCode className="w-4 h-4 text-hw-accent" />
+          </div>
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] font-bold text-white">QR Code Generator</span>
         </div>
 
         {/* Dynamic Input */}
@@ -129,7 +101,7 @@ export default function Generator() {
             type="text"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Payload data..."
+            placeholder="Enter URL, text, or data..."
             className={cn(
               "w-full bg-white/5 border border-white/10 rounded-[1.5rem] py-4.5 pl-14 pr-4 text-sm font-mono transition-all outline-none placeholder:text-hw-secondary/30",
               isValid ? "focus:border-hw-accent/50 focus:bg-white/[0.08]" : "border-red-500/50 bg-red-500/5"
@@ -144,74 +116,69 @@ export default function Generator() {
                 className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-red-500"
               >
                 <AlertTriangle className="w-4 h-4" />
-                <span className="text-[9px] font-mono uppercase font-black tracking-tighter">Corrupt Data</span>
+                <span className="text-[9px] font-mono uppercase font-black tracking-tighter">Too Long</span>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
         {/* Customization Options */}
-        <AnimatePresence>
-          {type === 'qr' && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="space-y-4 overflow-hidden"
-            >
-              <div className="bg-white/5 border border-white/10 rounded-[1.5rem] p-4 flex flex-col gap-4">
-                {/* Logo Upload */}
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-white">Custom Logo</p>
-                    <p className="text-[8px] font-mono text-hw-secondary uppercase tracking-widest mt-0.5 line-clamp-1">Auto-fetch from links if empty</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {logoBase64 && (
-                      <button onClick={removeLogo} className="p-2 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/40 transition-colors">
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                    <button 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 glass-button text-white text-[10px] font-mono uppercase tracking-widest font-bold flex items-center justify-center gap-2 rounded-xl text-center shadow-lg"
-                    >
-                      <Upload className="w-4 h-4" /> {logoBase64 ? 'Change' : 'Upload'}
-                    </button>
-                    <input 
-                      ref={fileInputRef}
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleFileUpload} 
-                      className="hidden" 
-                    />
-                  </div>
-                </div>
-
-                <div className="h-px w-full bg-white/5" />
-
-                {/* Color Picker */}
-                <div>
-                  <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-white mb-3">Accent Color</p>
-                  <div className="flex items-center gap-3">
-                    {PRESET_COLORS.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => setFgColor(color)}
-                        className={cn(
-                          "w-8 h-8 rounded-full border-2 transition-transform duration-300",
-                          fgColor === color ? "border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.4)]" : "border-transparent scale-90 hover:scale-100"
-                        )}
-                        style={{ backgroundColor: color }}
-                        aria-label={`Select color ${color}`}
-                      />
-                    ))}
-                  </div>
-                </div>
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="space-y-4 overflow-hidden"
+        >
+          <div className="bg-white/5 border border-white/10 rounded-[1.5rem] p-4 flex flex-col gap-4">
+            {/* Logo Upload */}
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-white">Custom Logo</p>
+                <p className="text-[8px] font-mono text-hw-secondary uppercase tracking-widest mt-0.5 line-clamp-1">Auto-fetch from links if empty</p>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <div className="flex items-center gap-2 shrink-0">
+                {logoBase64 && (
+                  <button onClick={removeLogo} className="p-2 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/40 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 glass-button text-white text-[10px] font-mono uppercase tracking-widest font-bold flex items-center justify-center gap-2 rounded-xl text-center shadow-lg"
+                >
+                  <Upload className="w-4 h-4" /> {logoBase64 ? 'Change' : 'Upload'}
+                </button>
+                <input 
+                  ref={fileInputRef}
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleFileUpload} 
+                  className="hidden" 
+                />
+              </div>
+            </div>
+
+            <div className="h-px w-full bg-white/5" />
+
+            {/* Color Picker */}
+            <div>
+              <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-white mb-3">Accent Color</p>
+              <div className="flex items-center gap-3">
+                {PRESET_COLORS.map(color => (
+                  <button
+                    key={color}
+                    onClick={() => setFgColor(color)}
+                    className={cn(
+                      "w-8 h-8 rounded-full border-2 transition-transform duration-300",
+                      fgColor === color ? "border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.4)]" : "border-transparent scale-90 hover:scale-100"
+                    )}
+                    style={{ backgroundColor: color }}
+                    aria-label={`Select color ${color}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </div>
 
       <motion.div
@@ -227,38 +194,19 @@ export default function Generator() {
         </div>
 
         <div id="generated-code" className="flex items-center justify-center min-h-[220px] min-w-[220px] relative z-10">
-          {type === 'qr' ? (
-            <QRCodeSVG
-              value={text || ' '}
-              size={220}
-              level="H"
-              includeMargin={false}
-              fgColor={fgColor}
-              imageSettings={autoLogoUrl ? {
-                src: autoLogoUrl,
-                height: 48,
-                width: 48,
-                excavate: true,
-              } : undefined}
-            />
-          ) : (
-            <div className="scale-125 px-4 overflow-hidden">
-              {isValid ? (
-                <Barcode 
-                  value={text || ' '} 
-                  width={1.6} 
-                  height={80} 
-                  fontSize={10}
-                  background="transparent"
-                  lineColor={fgColor}
-                />
-              ) : (
-                <div className="w-40 h-20 bg-hw-bg/5 flex items-center justify-center rounded-lg border border-dashed border-red-300">
-                   <p className="text-[8px] font-mono text-red-400 uppercase">Invalid Symbology</p>
-                </div>
-              )}
-            </div>
-          )}
+          <QRCodeSVG
+            value={text || ' '}
+            size={220}
+            level="H"
+            includeMargin={false}
+            fgColor={fgColor}
+            imageSettings={autoLogoUrl ? {
+              src: autoLogoUrl,
+              height: 48,
+              width: 48,
+              excavate: true,
+            } : undefined}
+          />
         </div>
 
         {isValid && (
@@ -272,10 +220,10 @@ export default function Generator() {
       </motion.div>
 
       <div className="text-center space-y-2 pt-8">
-        <p className="text-[10px] font-mono text-hw-secondary/60 uppercase tracking-[0.4em] font-black">Cryptographic Hub v4.0</p>
+        <p className="text-[10px] font-mono text-hw-secondary/60 uppercase tracking-[0.4em] font-black">QR Generator Pro v1.3</p>
         <div className="flex items-center justify-center gap-4 opacity-30">
           <div className="h-px w-8 bg-hw-secondary" />
-          <p className="text-[8px] font-mono text-hw-secondary uppercase">Alpha Protocol Active</p>
+          <p className="text-[8px] font-mono text-hw-secondary uppercase">ISO/IEC 18004</p>
           <div className="h-px w-8 bg-hw-secondary" />
         </div>
       </div>

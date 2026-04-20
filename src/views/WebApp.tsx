@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { Scan, PlusCircle, History, Trash2, Copy, ExternalLink, CheckCircle2, Barcode, Download, ChevronLeft, MessageSquare, Send, X } from 'lucide-react';
+import { Scan, PlusCircle, History, Trash2, Copy, ExternalLink, CheckCircle2, Download, ChevronLeft, MessageSquare, Send, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Scanner from '../components/Scanner';
 import Generator from '../components/Generator';
@@ -11,17 +10,18 @@ interface ScanHistoryItem {
   id: string;
   text: string;
   timestamp: number;
-  type: 'QR' | 'Barcode';
+  type: 'QR';
 }
 
 interface WebAppProps {
-  onBack: () => void;
+  isNative: boolean;
+  onBack?: () => void;
 }
 
-export default function WebApp({ onBack }: WebAppProps) {
-  const [activeTab, setActiveTab] = useState<'scan' | 'barcode' | 'generate' | 'history'>('scan');
+export default function WebApp({ isNative, onBack }: WebAppProps) {
+  const [activeTab, setActiveTab] = useState<'scan' | 'generate' | 'history'>('scan');
   const [history, setHistory] = useState<ScanHistoryItem[]>([]);
-  const [lastScanned, setLastScanned] = useState<{ text: string; type: 'QR' | 'Barcode' } | null>(null);
+  const [lastScanned, setLastScanned] = useState<{ text: string; type: 'QR' } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -46,7 +46,7 @@ export default function WebApp({ onBack }: WebAppProps) {
     }
   }, []);
 
-  const saveToHistory = useCallback((text: string, type: 'QR' | 'Barcode') => {
+  const saveToHistory = useCallback((text: string) => {
     const sanitized = sanitizeUrl(text);
     if (!sanitized) return;
 
@@ -54,7 +54,7 @@ export default function WebApp({ onBack }: WebAppProps) {
       id: Math.random().toString(36).substr(2, 9),
       text: sanitized,
       timestamp: Date.now(),
-      type
+      type: 'QR'
     };
     
     setHistory(prev => {
@@ -63,11 +63,11 @@ export default function WebApp({ onBack }: WebAppProps) {
       return updated;
     });
     
-    setLastScanned({ text: sanitized, type });
+    setLastScanned({ text: sanitized, type: 'QR' });
   }, []);
 
   const handleScanQR = useCallback((text: string) => {
-    saveToHistory(text, 'QR');
+    saveToHistory(text);
   }, [saveToHistory]);
 
   const clearHistory = () => {
@@ -81,8 +81,9 @@ export default function WebApp({ onBack }: WebAppProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleTabChange = (tab: 'scan' | 'barcode' | 'generate' | 'history') => {
-    if ((tab === 'barcode' || tab === 'generate') && !Capacitor.isNativePlatform()) {
+  const handleTabChange = (tab: 'scan' | 'generate' | 'history') => {
+    // On web browser, gate the generate tab behind the download prompt
+    if (tab === 'generate' && !isNative) {
       setShowPrompt(true);
       return;
     }
@@ -107,13 +108,18 @@ export default function WebApp({ onBack }: WebAppProps) {
       {/* Header */}
       <header className="p-8 pb-4 space-y-1 relative z-10">
         <div className="flex items-center justify-between">
-          <button 
-            onClick={onBack} 
-            className="flex items-center gap-2 px-3 py-2 -ml-2 rounded-xl hover:bg-white/5 transition-all text-hw-secondary hover:text-white group"
-          >
-            <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
-            <span className="text-[10px] font-mono uppercase tracking-widest font-bold">Exit Demo</span>
-          </button>
+          {/* Show Exit Demo ONLY on web browser, never in APK */}
+          {!isNative && onBack ? (
+            <button 
+              onClick={onBack} 
+              className="flex items-center gap-2 px-3 py-2 -ml-2 rounded-xl hover:bg-white/5 transition-all text-hw-secondary hover:text-white group"
+            >
+              <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
+              <span className="text-[10px] font-mono uppercase tracking-widest font-bold">Exit Demo</span>
+            </button>
+          ) : (
+            <div /> /* Empty spacer for APK so justify-between still works */
+          )}
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setShowFeedback(true)}
@@ -123,7 +129,7 @@ export default function WebApp({ onBack }: WebAppProps) {
               <MessageSquare className="w-4 h-4" />
             </button>
             <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
-              <span className="text-[9px] font-mono text-hw-secondary uppercase tracking-[0.2em] font-bold">V1.2.0</span>
+              <span className="text-[9px] font-mono text-hw-secondary uppercase tracking-[0.2em] font-bold">V1.3.0</span>
             </div>
           </div>
         </div>
@@ -135,7 +141,10 @@ export default function WebApp({ onBack }: WebAppProps) {
             <span className="tracking-tight">ScanGen</span><span className="text-hw-accent">PRO</span>
           </h1>
         </div>
-        <p className="text-[10px] font-mono text-hw-secondary/60 uppercase tracking-[0.3em] pl-1">Live Web Preview (Limited)</p>
+        {/* Show "Limited" subtitle only on web, not inside APK */}
+        {!isNative && (
+          <p className="text-[10px] font-mono text-hw-secondary/60 uppercase tracking-[0.3em] pl-1">Live Web Preview (Limited)</p>
+        )}
       </header>
 
       {/* Main Content */}
@@ -149,11 +158,22 @@ export default function WebApp({ onBack }: WebAppProps) {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
-              <Scanner mode="qr" onScan={handleScanQR} />
+              <Scanner onScan={handleScanQR} />
               
-              {lastScanned && lastScanned.type === 'QR' && (
+              {lastScanned && (
                 <ResultCard data={lastScanned.text} onClear={() => setLastScanned(null)} />
               )}
+            </motion.div>
+          )}
+
+          {activeTab === 'generate' && (
+            <motion.div
+              key="generate"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <Generator />
             </motion.div>
           )}
 
@@ -234,9 +254,9 @@ export default function WebApp({ onBack }: WebAppProps) {
         </AnimatePresence>
       </main>
 
-      {/* Download Prompt Modal */}
+      {/* Download Prompt Modal — ONLY shown on web browser, never in APK */}
       <AnimatePresence>
-        {showPrompt && (
+        {showPrompt && !isNative && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -255,7 +275,7 @@ export default function WebApp({ onBack }: WebAppProps) {
               <div className="space-y-2">
                 <h3 className="text-xl font-bold tracking-tight">Unlock All Features</h3>
                 <p className="text-xs text-hw-secondary leading-relaxed">
-                  Barcode scanning and generation tools are exclusive to our Pro Android app.
+                  QR code generation is exclusive to our Pro Android app. Download for the full experience.
                 </p>
               </div>
               <div className="space-y-3 pt-2">
@@ -336,20 +356,14 @@ export default function WebApp({ onBack }: WebAppProps) {
         )}
       </AnimatePresence>
 
-      {/* Navigation */}
+      {/* Navigation — 3 tabs only: Scan, Create, Logs (no barcode) */}
       <nav className="p-6 pt-2">
         <div className="bg-hw-card p-2 rounded-2xl flex items-center justify-between shadow-2xl border border-white/5">
           <NavButton 
             active={activeTab === 'scan'} 
             onClick={() => handleTabChange('scan')} 
             icon={<Scan className="w-4 h-4" />} 
-            label="QR" 
-          />
-          <NavButton 
-            active={activeTab === 'barcode'} 
-            onClick={() => handleTabChange('barcode')} 
-            icon={<Barcode className="w-4 h-4" />} 
-            label="Barcode" 
+            label="QR Scan" 
           />
           <NavButton 
             active={activeTab === 'generate'} 

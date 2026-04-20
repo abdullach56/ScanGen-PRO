@@ -47,6 +47,15 @@ export const isLink = (text: string): boolean => {
   return appSchemes.some(scheme => lowered.startsWith(scheme));
 };
 
+/** Validate QR code content (max 2000 chars for QR) */
+export const isValidQR = (text: string): boolean => {
+  if (!text) return false;
+  return text.length <= 2000;
+};
+
+/**
+ * @deprecated Use isValidQR instead. Kept for backwards compatibility.
+ */
 export const isValidBarcode = (text: string, type: 'qr' | 'barcode'): boolean => {
   if (!text) return false;
   
@@ -56,4 +65,3 @@ export const isValidBarcode = (text: string, type: 'qr' | 'barcode'): boolean =>
   
   return text.length <= 2000;
 };
-
