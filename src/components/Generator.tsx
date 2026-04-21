@@ -237,10 +237,13 @@ export default function Generator() {
           <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-30">
             <button
               onClick={downloadCode}
-              className="bg-hw-accent text-white p-5 rounded-[1.5rem] shadow-[0_15px_30px_rgba(59,130,246,0.4)] hover:scale-110 active:scale-95 transition-all glow-accent group-hover:rotate-3"
+              className="bg-hw-accent text-white px-6 py-4 rounded-[1.5rem] shadow-[0_15px_30px_rgba(59,130,246,0.4)] hover:scale-105 active:scale-95 transition-all glow-accent flex items-center gap-2 group-hover:rotate-1"
               title={Capacitor.isNativePlatform() ? "Save to Gallery" : "Download QR"}
             >
-              <Download className="w-7 h-7" />
+              <Download className="w-5 h-5" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest">
+                {Capacitor.isNativePlatform() ? 'Save to Gallery' : 'Download QR'}
+              </span>
             </button>
           </div>
         )}
