@@ -11,16 +11,17 @@ interface ScannerProps {
 type CameraStatus = 'checking' | 'ready' | 'denied' | 'unavailable' | 'error' | 'scanning_file';
 
 const SCAN_CONFIG = {
-  fps: 15,
+  fps: 20, // Increased for smoother detection
   qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
     const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-    const qrboxSize = Math.floor(minEdgeSize * 0.7);
+    const qrboxSize = Math.floor(minEdgeSize * 0.75);
     return {
       width: qrboxSize,
       height: qrboxSize
     };
   },
   aspectRatio: 1.0,
+  disableFlip: false,
 };
 
 export default function Scanner({ onScan }: ScannerProps) {
@@ -31,13 +32,20 @@ export default function Scanner({ onScan }: ScannerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const stopScanner = useCallback(async () => {
-    if (scannerRef.current && scannerRef.current.isScanning) {
-      try {
-        await scannerRef.current.stop();
-        setIsCameraActive(false);
-      } catch (err) {
-        console.error("Failed to stop scanner", err);
+    if (scannerRef.current) {
+      if (scannerRef.current.isScanning) {
+        try {
+          await scannerRef.current.stop();
+        } catch (err) {
+          console.error("Failed to stop scanner", err);
+        }
       }
+      // Releasing internal references for GC
+      try {
+        scannerRef.current.clear();
+      } catch (e) {}
+      scannerRef.current = null;
+      setIsCameraActive(false);
     }
   }, []);
 

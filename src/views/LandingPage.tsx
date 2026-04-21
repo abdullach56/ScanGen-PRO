@@ -28,7 +28,7 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
             <Github className="w-4 h-4" /> Github
           </a>
         </div>
-        <button 
+        <button
           onClick={onTryWeb}
           className="glass-button px-6 py-3 rounded-full text-[10px] font-mono font-bold uppercase tracking-widest"
         >
@@ -38,7 +38,7 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
 
       {/* Hero Section */}
       <section className="relative z-10 pt-20 pb-32 px-6 max-w-5xl mx-auto text-center">
-        <motion.h1 
+        <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -51,14 +51,14 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
           </span>
           <br />
           <span className="text-hw-accent relative">
-            Instant QR-GEN.
+            Instant Payment.
             <div className="absolute -right-10 top-0 hidden md:block">
               <ShieldCheck className="w-8 h-8 text-green-500 opacity-80" />
             </div>
           </span>
         </motion.h1>
 
-        <motion.p 
+        <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
@@ -67,20 +67,20 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
           Experience professional-grade efficiency with ScanGen-PRO. Built for privacy and optimized for 4GB RAM phones, it delivers lightning-fast QR detection and instant UPI redirection. The most reliable scanner for your daily payments.
         </motion.p>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <a 
-            href="https://abdullach56.github.io/ScanGen-PRO/scangen-pro.apk" 
+          <a
+            href="https://abdullach56.github.io/ScanGen-PRO/scangen-pro.apk"
             download="scangen-pro.apk"
             className="w-full sm:w-auto flex items-center justify-center gap-3 bg-hw-accent text-white px-10 py-5 rounded-2xl font-bold text-sm hover:brightness-110 transition-all active:scale-[0.98] shadow-[0_10px_30px_rgba(59,130,246,0.3)]"
           >
             <Download className="w-5 h-5" /> Download for Android
           </a>
-          <button 
+          <button
             onClick={onTryWeb}
             className="w-full sm:w-auto flex items-center justify-center gap-3 glass-button px-10 py-5 rounded-2xl font-bold text-sm active:scale-[0.98]"
           >
@@ -89,7 +89,7 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
         </motion.div>
 
         {/* Hero Visual */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
@@ -97,13 +97,13 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
         >
           <div className="bg-hw-card rounded-[2rem] p-1 border border-white/5 shadow-2xl relative overflow-hidden aspect-[9/10] sm:aspect-video flex items-center justify-center">
             <div className="text-center space-y-6">
-               <div className="w-20 h-20 mx-auto rounded-3xl bg-white/5 flex items-center justify-center border border-white/5">
-                  <Scan className="w-10 h-10 text-hw-accent/80" />
-               </div>
-               <div className="space-y-1.5 opacity-20">
-                 <div className="h-1.5 w-24 bg-white/40 mx-auto rounded-full" />
-                 <div className="h-1.5 w-16 bg-white/20 mx-auto rounded-full" />
-               </div>
+              <div className="w-20 h-20 mx-auto rounded-3xl bg-white/5 flex items-center justify-center border border-white/5">
+                <Scan className="w-10 h-10 text-hw-accent/80" />
+              </div>
+              <div className="space-y-1.5 opacity-20">
+                <div className="h-1.5 w-24 bg-white/40 mx-auto rounded-full" />
+                <div className="h-1.5 w-16 bg-white/20 mx-auto rounded-full" />
+              </div>
             </div>
             {/* Minimal Indicators */}
             <div className="absolute top-8 left-8 p-2 border border-white/5 rounded-lg opacity-40">
@@ -124,19 +124,19 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          <FeatureCard 
+          <FeatureCard
             icon={<Zap className="w-8 h-8" />}
             title="Instant UPI Detection"
             description="Deep link integration for all major payment apps like PhonePe, GPay, and Paytm."
             delay={0.1}
           />
-          <FeatureCard 
+          <FeatureCard
             icon={<Cpu className="w-8 h-8" />}
             title="Lightning Performance"
             description="Highly optimized C++ scanning engine running via Capacitor for near-native speeds."
             delay={0.2}
           />
-          <FeatureCard 
+          <FeatureCard
             icon={<Battery className="w-8 h-8" />}
             title="Battery Optimized"
             description="Zero background consumption. Low CPU usage during active scanning cycles."
@@ -179,7 +179,7 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
 
 function FeatureCard({ icon, title, description, delay }: { icon: React.ReactNode; title: string; description: string; delay: number }) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}

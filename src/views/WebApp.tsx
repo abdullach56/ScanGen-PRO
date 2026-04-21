@@ -134,8 +134,8 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
           </div>
         </div>
         <div className="pt-4 flex items-center gap-3">
-          <div className="w-10 h-10 glass-card rounded-xl flex items-center justify-center glow-accent">
-            <Scan className="w-6 h-6 text-hw-accent" />
+          <div className="w-10 h-10 glass-card rounded-xl flex items-center justify-center glow-accent overflow-hidden">
+            <img src="./logo.png" alt="Logo" className="w-full h-full object-cover scale-110" />
           </div>
           <h1 className="text-2xl font-mono font-bold tracking-tighter uppercase">
             <span className="tracking-tight">ScanGen</span><span className="text-hw-accent">PRO</span>

@@ -4,6 +4,9 @@ import { Download, Type, QrCode, AlertTriangle, ShieldCheck, Upload, X } from 'l
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { isValidQR } from '../lib/security';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 
 const PRESET_COLORS = ['#0A0A0B', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
@@ -18,15 +21,7 @@ export default function Generator() {
 
   const autoLogoUrl = useMemo(() => {
     if (logoBase64) return logoBase64;
-    try {
-      const url = new URL(text);
-      if (url.protocol === 'http:' || url.protocol === 'https:') {
-        return `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(url.origin)}&size=128`;
-      }
-    } catch {
-      // not a valid URL
-    }
-    return undefined;
+    return './logo.png';
   }, [text, logoBase64]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,39 +41,68 @@ export default function Generator() {
     setLogoBase64(null);
   };
 
-  const downloadCode = () => {
+  const downloadCode = async () => {
     if (!isValid) return;
     
     const svg = document.getElementById('generated-code')?.querySelector('svg');
     if (!svg) return;
 
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    // Convert cross-origin logo warning bypass for download
-    img.crossOrigin = "anonymous";
-    
-    img.onload = () => {
-      canvas.width = img.width + 40; // Add padding
-      canvas.height = img.height + 40;
-      if (ctx) {
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 20, 20);
-      }
-      const pngFile = canvas.toDataURL('image/png');
-      const downloadLink = document.createElement('a');
-      downloadLink.download = `ScanGenPRO-qr-${Date.now()}.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
-    };
+    try {
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.crossOrigin = "anonymous";
+      
+      img.onload = async () => {
+        canvas.width = img.width + 40;
+        canvas.height = img.height + 40;
+        if (ctx) {
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 20, 20);
+        }
+        
+        const pngDataUrl = canvas.toDataURL('image/png');
 
-    const tempUrl = URL.createObjectURL(new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' }));
-    img.src = tempUrl;
-    
-    setTimeout(() => URL.revokeObjectURL(tempUrl), 100);
+        if (Capacitor.isNativePlatform()) {
+          try {
+            const fileName = `ScanGenPRO-qr-${Date.now()}.png`;
+            const base64Data = pngDataUrl.split(',')[1];
+            
+            const savedFile = await Filesystem.writeFile({
+              path: fileName,
+              data: base64Data,
+              directory: Directory.Documents, // Using Documents as a safe public-ish spot, or Pictures
+            });
+
+            // For Gallery visibility on Android, we'd ideally use a more specific plugin 
+            // or Share to trigger the intent and make it accessible.
+            await Share.share({
+              title: 'Saved QR Code',
+              text: 'Check out your generated QR code',
+              url: savedFile.uri,
+              dialogTitle: 'Share or View QR Code',
+            });
+            
+          } catch (err) {
+            console.error("Save to gallery failed:", err);
+          }
+        } else {
+          const downloadLink = document.createElement('a');
+          downloadLink.download = `ScanGenPRO-qr-${Date.now()}.png`;
+          downloadLink.href = pngDataUrl;
+          downloadLink.click();
+        }
+      };
+
+      const tempUrl = URL.createObjectURL(new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' }));
+      img.src = tempUrl;
+      setTimeout(() => URL.revokeObjectURL(tempUrl), 100);
+    } catch (err) {
+      console.error("Download failed:", err);
+    }
   };
 
   return (
@@ -210,12 +234,15 @@ export default function Generator() {
         </div>
 
         {isValid && (
-          <button
-            onClick={downloadCode}
-            className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-hw-accent text-white p-5 rounded-[1.5rem] shadow-[0_15px_30px_rgba(59,130,246,0.4)] hover:scale-110 active:scale-95 transition-all glow-accent group-hover:rotate-3 z-30"
-          >
-            <Download className="w-7 h-7" />
-          </button>
+          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-30">
+            <button
+              onClick={downloadCode}
+              className="bg-hw-accent text-white p-5 rounded-[1.5rem] shadow-[0_15px_30px_rgba(59,130,246,0.4)] hover:scale-110 active:scale-95 transition-all glow-accent group-hover:rotate-3"
+              title={Capacitor.isNativePlatform() ? "Save to Gallery" : "Download QR"}
+            >
+              <Download className="w-7 h-7" />
+            </button>
+          </div>
         )}
       </motion.div>
 
