@@ -17,7 +17,16 @@ export default function Generator() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isValid = useMemo(() => isValidQR(text), [text]);
+  const formatQRValue = (val: string) => {
+    const cleaned = val.trim();
+    if (/^\+?[\d\s-]{7,15}$/.test(cleaned)) {
+      return `tel:${cleaned.replace(/[\s-]/g, '')}`;
+    }
+    return cleaned;
+  };
+
+  const finalQRValue = useMemo(() => formatQRValue(text), [text]);
+  const isValid = useMemo(() => isValidQR(finalQRValue), [finalQRValue]);
 
   const autoLogoUrl = useMemo(() => {
     if (logoBase64) return logoBase64;
@@ -219,8 +228,9 @@ export default function Generator() {
 
         <div id="generated-code" className="flex items-center justify-center min-h-[220px] min-w-[220px] relative z-10">
           <QRCodeSVG
-            value={text || ' '}
-            size={220}
+            value={finalQRValue || ' '}
+            size={1024}
+            style={{ width: 220, height: 220 }}
             level="H"
             includeMargin={false}
             fgColor={fgColor}

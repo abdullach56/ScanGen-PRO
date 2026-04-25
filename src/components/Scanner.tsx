@@ -176,8 +176,7 @@ export default function Scanner({ onScan }: ScannerProps) {
               </div>
             </div>
             
-            {/* Ambient vignette */}
-            <div className="absolute inset-0 shadow-[inset_0_0_150px_rgba(0,0,0,0.8)]" />
+
           </div>
         )}
 

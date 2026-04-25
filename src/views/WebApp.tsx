@@ -67,6 +67,21 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
   }, []);
 
   const handleScanQR = useCallback((text: string) => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+      osc.stop(ctx.currentTime + 0.1);
+    } catch (e) {
+      console.error("Beep failed", e);
+    }
     saveToHistory(text);
   }, [saveToHistory]);
 
@@ -101,9 +116,7 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
 
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-hw-bg shadow-[0_0_100px_rgba(0,0,0,0.8)] border-x border-white/5 relative overflow-hidden">
-      {/* Background Glow */}
-      <div className="absolute -top-[20%] -right-[20%] w-[60%] h-[40%] bg-hw-accent/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute -bottom-[10%] -left-[20%] w-[50%] h-[30%] bg-hw-accent/5 blur-[100px] rounded-full pointer-events-none" />
+      {/* Background Glow removed for cleaner and faster UI */}
 
       {/* Header */}
       <header className="p-8 pb-4 space-y-1 relative z-10">
@@ -412,7 +425,7 @@ function ResultCard({ data, onClear }: { data: string; onClear: () => void }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       className="glass-card p-6 rounded-[2rem] space-y-5 relative overflow-hidden"
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-hw-accent/5 blur-3xl -mr-16 -mt-16 pointer-events-none" />
+
       
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
@@ -426,15 +439,19 @@ function ResultCard({ data, onClear }: { data: string; onClear: () => void }) {
 
       <div className="grid grid-cols-2 gap-3">
         {isLink(data) && (
-          <a
-            href={data}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => {
+              if (isDeepLink) {
+                window.location.href = data;
+              } else {
+                window.open(data, '_blank', 'noopener,noreferrer');
+              }
+            }}
             className="col-span-2 flex items-center justify-center gap-2 bg-hw-accent hover:bg-hw-accent/80 text-white py-4 rounded-2xl text-[11px] font-mono uppercase tracking-[0.2em] font-bold transition-all glow-accent active:scale-[0.98]"
           >
             <ExternalLink className="w-4 h-4" /> 
             {isDeepLink ? 'Open Secure App' : 'Open Link'}
-          </a>
+          </button>
         )}
         <button
           onClick={() => navigator.clipboard.writeText(data)}
