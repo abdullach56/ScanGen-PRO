@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Scan, PlusCircle, History, Trash2, Copy, ExternalLink, CheckCircle2, Download, ChevronLeft, MessageSquare, Send, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Scan, PlusCircle, History, Trash2, Copy, ExternalLink, CheckCircle2, Download, ChevronLeft, MessageSquare, Send, X, Wifi, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Scanner from '../components/Scanner';
 import Generator from '../components/Generator';
+import WifiQrGenerator from '../components/WifiQrGenerator';
+import Stats from '../components/Stats';
 import { cn } from '../lib/utils';
 import { sanitizeUrl, isLink } from '../lib/security';
 
@@ -19,13 +21,18 @@ interface WebAppProps {
 }
 
 export default function WebApp({ isNative, onBack }: WebAppProps) {
-  const [activeTab, setActiveTab] = useState<'scan' | 'generate' | 'history'>('scan');
+  const [activeTab, setActiveTab] = useState<'scan' | 'generate' | 'history' | 'stats'>('scan');
   const [history, setHistory] = useState<ScanHistoryItem[]>([]);
   const [lastScanned, setLastScanned] = useState<{ text: string; type: 'QR' } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
+  const [generateMode, setGenerateMode] = useState<'standard' | 'wifi'>('standard');
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<ScanHistoryItem | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const historyContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     try {
@@ -58,7 +65,8 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
     };
     
     setHistory(prev => {
-      const updated = [newItem, ...prev].slice(0, 50);
+      const filtered = prev.filter(item => item.text !== sanitized);
+      const updated = [newItem, ...filtered].slice(0, 50);
       localStorage.setItem('scan-history-v2', JSON.stringify(updated));
       return updated;
     });
@@ -83,6 +91,11 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
       console.error("Beep failed", e);
     }
     saveToHistory(text);
+    
+    // Auto-open dialer if the scanned text is a phone number link
+    if (text.toLowerCase().startsWith('tel:')) {
+      window.location.href = text;
+    }
   }, [saveToHistory]);
 
   const clearHistory = () => {
@@ -96,7 +109,7 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleTabChange = (tab: 'scan' | 'generate' | 'history') => {
+  const handleTabChange = (tab: 'scan' | 'generate' | 'history' | 'stats') => {
     // On web browser, gate the generate tab behind the download prompt
     if (tab === 'generate' && !isNative) {
       setShowPrompt(true);
@@ -113,6 +126,25 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
     setShowFeedback(false);
     setFeedbackText('');
   };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (e.currentTarget.scrollTop > 200) {
+      setShowScrollTop(true);
+    } else {
+      setShowScrollTop(false);
+    }
+  };
+
+  const scrollToTop = () => {
+    if (historyContainerRef.current) {
+      historyContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const filteredHistory = history.filter(item => 
+    item.text.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    item.type.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-hw-bg shadow-[0_0_100px_rgba(0,0,0,0.8)] border-x border-white/5 relative overflow-hidden">
@@ -161,7 +193,7 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto p-6 relative" onScroll={activeTab === 'history' ? handleScroll : undefined} ref={activeTab === 'history' ? historyContainerRef : undefined}>
         <AnimatePresence mode="wait">
           {activeTab === 'scan' && (
             <motion.div
@@ -185,8 +217,30 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
+              className="space-y-6"
             >
-              <Generator />
+              <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 mb-4">
+                <button
+                  onClick={() => setGenerateMode('standard')}
+                  className={cn(
+                    "flex-1 py-2 text-[10px] font-mono uppercase tracking-widest font-bold rounded-xl transition-all",
+                    generateMode === 'standard' ? "bg-hw-accent text-white shadow-lg" : "text-hw-secondary hover:text-white"
+                  )}
+                >
+                  Standard
+                </button>
+                <button
+                  onClick={() => setGenerateMode('wifi')}
+                  className={cn(
+                    "flex-1 py-2 text-[10px] font-mono uppercase tracking-widest font-bold rounded-xl transition-all flex items-center justify-center gap-2",
+                    generateMode === 'wifi' ? "bg-hw-accent text-white shadow-lg" : "text-hw-secondary hover:text-white"
+                  )}
+                >
+                  <Wifi className="w-3 h-3" /> WiFi
+                </button>
+              </div>
+              
+              {generateMode === 'standard' ? <Generator /> : <WifiQrGenerator />}
             </motion.div>
           )}
 
@@ -210,18 +264,31 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
                 )}
               </div>
 
-              {history.length === 0 ? (
+              {history.length > 0 && (
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search by text, wifi, payment..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white outline-none focus:border-hw-accent/50 transition-all placeholder:text-hw-secondary/50"
+                  />
+                </div>
+              )}
+
+              {filteredHistory.length === 0 ? (
                 <div className="py-20 text-center space-y-4 opacity-40">
                   <History className="w-12 h-12 mx-auto text-hw-secondary" />
-                  <p className="text-xs font-mono uppercase tracking-widest">No history yet</p>
+                  <p className="text-xs font-mono uppercase tracking-widest">No history found</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {history.map((item) => (
+                <div className="space-y-3 pb-10">
+                  {filteredHistory.map((item) => (
                     <motion.div
                       layout
                       key={item.id}
-                      className="bg-hw-card p-4 rounded-2xl border border-white/5 shadow-sm hover:shadow-md transition-shadow group"
+                      onClick={() => setSelectedHistoryItem(item)}
+                      className="bg-hw-card p-4 rounded-2xl border border-white/5 shadow-sm hover:shadow-md transition-shadow group cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
@@ -262,6 +329,32 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
                   ))}
                 </div>
               )}
+
+              {/* Scroll to Top Button */}
+              <AnimatePresence>
+                {showScrollTop && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={scrollToTop}
+                    className="fixed bottom-24 right-6 p-3 bg-hw-accent text-white rounded-full shadow-lg glow-accent z-40 hover:scale-110 transition-transform"
+                  >
+                    <ChevronLeft className="w-5 h-5 rotate-90" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+          {activeTab === 'stats' && (
+            <motion.div
+              key="stats"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              <Stats history={history} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -369,7 +462,72 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
         )}
       </AnimatePresence>
 
-      {/* Navigation — 3 tabs only: Scan, Create, Logs (no barcode) */}
+      {/* History Item Modal */}
+      <AnimatePresence>
+        {selectedHistoryItem && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="glass-card p-6 rounded-[2rem] max-w-sm w-full space-y-5 relative border border-white/10 shadow-2xl max-h-[80vh] overflow-y-auto"
+            >
+              <button 
+                onClick={() => setSelectedHistoryItem(null)}
+                className="absolute top-5 right-5 p-2 rounded-full hover:bg-white/5 text-hw-secondary transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              
+              <div className="flex items-center gap-2 mb-2">
+                <History className="w-5 h-5 text-hw-accent" />
+                <h3 className="text-sm font-bold tracking-tight text-white uppercase font-mono">Full Details</h3>
+              </div>
+              
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                <p className="text-sm font-mono break-all whitespace-pre-wrap text-white leading-relaxed">
+                  {selectedHistoryItem.text}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                {isLink(selectedHistoryItem.text) && (
+                  <button
+                    onClick={() => {
+                      if (selectedHistoryItem.text.startsWith('http')) {
+                        window.open(selectedHistoryItem.text, '_blank', 'noopener,noreferrer');
+                      } else {
+                        window.location.href = selectedHistoryItem.text;
+                      }
+                    }}
+                    className="col-span-2 flex items-center justify-center gap-2 bg-hw-accent hover:bg-hw-accent/80 text-white py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest font-bold transition-all glow-accent"
+                  >
+                    <ExternalLink className="w-4 h-4" /> Open Link
+                  </button>
+                )}
+                <button
+                  onClick={() => copyToClipboard(selectedHistoryItem.text, selectedHistoryItem.id)}
+                  className="flex items-center justify-center gap-2 glass-button text-white py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest font-bold"
+                >
+                  {copiedId === selectedHistoryItem.id ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <Copy className="w-4 h-4 text-hw-secondary" />
+                  )}
+                  Copy
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Navigation — 4 tabs: Scan, Create, Logs, Stats */}
       <nav className="p-6 pt-2">
         <div className="bg-hw-card p-2 rounded-2xl flex items-center justify-between shadow-2xl border border-white/5">
           <NavButton 
@@ -389,6 +547,12 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
             onClick={() => handleTabChange('history')} 
             icon={<History className="w-4 h-4" />} 
             label="Logs" 
+          />
+          <NavButton 
+            active={activeTab === 'stats'} 
+            onClick={() => handleTabChange('stats')} 
+            icon={<BarChart3 className="w-4 h-4" />} 
+            label="Stats" 
           />
         </div>
       </nav>

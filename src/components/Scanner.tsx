@@ -27,6 +27,7 @@ const SCAN_CONFIG = {
 export default function Scanner({ onScan }: ScannerProps) {
   const [status, setStatus] = useState<CameraStatus>('checking');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -129,8 +130,9 @@ export default function Scanner({ onScan }: ScannerProps) {
       onScan(result, { decodedText: result });
       setStatus('ready');
     } catch (err) {
-      setErrorMsg("No readable QR code detected in image.");
-      setStatus('error');
+      setToastMsg("Invalid or no readable QR code detected.");
+      setStatus('ready');
+      setTimeout(() => setToastMsg(null), 3000);
     }
   };
 
@@ -233,6 +235,21 @@ export default function Scanner({ onScan }: ScannerProps) {
               >
                 Re-Initialize
               </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Toast Notification */}
+        <AnimatePresence>
+          {toastMsg && (
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 bg-red-500/90 text-white px-4 py-2 rounded-xl text-[10px] font-mono uppercase tracking-widest font-bold shadow-lg flex items-center gap-2 whitespace-nowrap backdrop-blur-sm"
+            >
+              <AlertCircle className="w-4 h-4" />
+              {toastMsg}
             </motion.div>
           )}
         </AnimatePresence>
