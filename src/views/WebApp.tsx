@@ -184,7 +184,7 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
               <MessageSquare className="w-4 h-4" />
             </button>
             <div className="px-3 py-1 bg-white rounded-full border border-hw-border shadow-sm">
-              <span className="text-[9px] font-sans text-hw-secondary uppercase font-bold tracking-wider">V1.3.1</span>
+              <span className="text-[9px] font-sans text-hw-secondary uppercase font-bold tracking-wider">V1.3.2</span>
             </div>
           </div>
         </div>
