@@ -18,7 +18,7 @@ export default function App() {
       const checkUpdate = async () => {
         try {
           // This should match the current release version of the app
-          const currentVersion = "1.3.0"; 
+          const currentVersion = "1.3.1"; 
           
           // Append timestamp to prevent caching
           const response = await fetch(`https://abdullach56.github.io/ScanGen-PRO/version.json?t=${new Date().getTime()}`);
