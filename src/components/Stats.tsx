@@ -37,11 +37,11 @@ export default function Stats({ history }: StatsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 bg-hw-accent/10 rounded-xl flex items-center justify-center">
+      <div className="flex items-center gap-2 mb-6">
+        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
           <BarChart3 className="w-4 h-4 text-hw-accent" />
         </div>
-        <span className="text-[10px] font-mono uppercase tracking-[0.2em] font-bold text-white">System Stats Dashboard</span>
+        <span className="text-sm font-sans font-bold text-slate-900">System Stats Dashboard</span>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -51,22 +51,22 @@ export default function Stats({ history }: StatsProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-hw-card p-5 rounded-2xl border border-white/5 shadow-sm flex flex-col gap-3"
+            className="bg-white p-5 rounded-2xl border border-hw-border shadow-sm flex flex-col gap-3"
           >
-            <div className="text-hw-accent bg-hw-accent/10 w-10 h-10 rounded-xl flex items-center justify-center">
+            <div className="text-hw-accent bg-blue-50 w-10 h-10 rounded-xl flex items-center justify-center">
               {stat.icon}
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{stat.value}</p>
-              <p className="text-[9px] font-mono text-hw-secondary uppercase tracking-widest mt-1">{stat.label}</p>
+              <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+              <p className="text-xs font-sans text-slate-500 mt-1">{stat.label}</p>
             </div>
           </motion.div>
         ))}
       </div>
 
       {history.length === 0 && (
-        <div className="py-10 text-center opacity-40">
-          <p className="text-xs font-mono uppercase tracking-widest">No data available yet</p>
+        <div className="py-10 text-center opacity-50">
+          <p className="text-sm font-sans text-slate-500">No data available yet</p>
         </div>
       )}
     </div>

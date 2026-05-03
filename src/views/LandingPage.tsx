@@ -24,7 +24,7 @@ export default function LandingPage({ onTryWeb }: LandingPageProps) {
         <div className="hidden md:flex items-center gap-8 text-[11px] font-mono uppercase tracking-[0.2em] text-hw-secondary font-bold">
           <a href="#features" className="hover:text-white transition-colors">Features</a>
           <a href="#about" className="hover:text-white transition-colors">Performance</a>
-          <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-2">
+          <a href="https://github.com/abdullach56/ScanGen-PRO" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-2">
             <Github className="w-4 h-4" /> Github
           </a>
         </div>

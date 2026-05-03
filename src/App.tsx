@@ -13,33 +13,51 @@ export default function App() {
 
   useEffect(() => {
     if (isNative) {
-      // Automatic updater detection system mock
-      // Replace with actual endpoint to fetch latest app version
-      setTimeout(() => {
-        const currentVersion = "1.3.0";
-        const latestVersion = "1.3.0"; // Change this on server to > 1.3.0 to trigger update
-        if (latestVersion > currentVersion) {
-          setUpdateRequired(true);
+      // Automatic updater detection system
+      // Fetches the latest version from the deployed version.json file
+      const checkUpdate = async () => {
+        try {
+          // This should match the current release version of the app
+          const currentVersion = "1.3.0"; 
+          
+          // Append timestamp to prevent caching
+          const response = await fetch(`https://abdullach56.github.io/ScanGen-PRO/version.json?t=${new Date().getTime()}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            const latestVersion = data.version;
+            
+            // Compare versions (e.g., "1.4.0" > "1.3.0")
+            const isNewer = latestVersion.localeCompare(currentVersion, undefined, { numeric: true, sensitivity: 'base' }) > 0;
+            
+            if (isNewer) {
+              setUpdateRequired(true);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to check for app updates:", error);
         }
-      }, 1000);
+      };
+
+      setTimeout(checkUpdate, 1500);
     }
   }, []);
 
   if (updateRequired) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-hw-bg p-8 text-center space-y-6">
-        <div className="w-20 h-20 bg-hw-accent/10 rounded-3xl flex items-center justify-center">
+        <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center">
           <img src="./logo.png" alt="Logo" className="w-12 h-12 object-cover" />
         </div>
         <div className="space-y-2">
-          <h1 className="text-xl font-bold font-mono text-white uppercase tracking-widest">Update Required</h1>
-          <p className="text-[10px] text-hw-secondary font-mono leading-relaxed max-w-xs mx-auto">
+          <h1 className="text-xl font-bold font-sans text-slate-900">Update Required</h1>
+          <p className="text-sm text-hw-secondary font-sans leading-relaxed max-w-xs mx-auto">
             A new version of ScanGen-PRO is available. Please update the app to continue using the latest features and bug fixes.
           </p>
         </div>
         <a 
           href="https://abdullach56.github.io/ScanGen-PRO/" 
-          className="bg-hw-accent text-white px-8 py-3 rounded-2xl font-bold text-[11px] font-mono uppercase tracking-widest active:scale-95 transition-transform"
+          className="bg-hw-accent text-white px-8 py-3 rounded-xl font-bold text-sm font-sans shadow-sm active:scale-95 transition-transform"
         >
           Update Now
         </a>

@@ -90,62 +90,62 @@ export default function WifiQrGenerator() {
   return (
     <div className="flex flex-col items-center space-y-8 w-full max-w-md mx-auto relative z-10 pb-20">
       <div className="w-full space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-hw-accent/10 rounded-xl flex items-center justify-center">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
             <Wifi className="w-4 h-4 text-hw-accent" />
           </div>
-          <span className="text-[10px] font-mono uppercase tracking-[0.2em] font-bold text-white">WiFi QR Generator</span>
+          <span className="text-sm font-sans font-bold text-slate-900">WiFi QR Generator</span>
         </div>
 
         <div className="space-y-4">
           <div className="relative group">
-            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-              <Wifi className={cn("w-4 h-4 transition-colors duration-300", ssid ? "text-hw-accent" : "text-white/30")} />
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Wifi className={cn("w-4 h-4 transition-colors duration-300", ssid ? "text-hw-accent" : "text-slate-400")} />
             </div>
             <input
               type="text"
               value={ssid}
               onChange={(e) => setSsid(e.target.value)}
               placeholder="Network Name (SSID)"
-              className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] py-4.5 pl-14 pr-4 text-sm font-mono transition-all outline-none placeholder:text-hw-secondary/30 focus:border-hw-accent/50 focus:bg-white/[0.08]"
+              className="w-full bg-white border border-hw-border rounded-2xl py-4 pl-12 pr-4 text-sm font-sans transition-all outline-none placeholder:text-slate-400 text-slate-900 shadow-sm focus:border-hw-accent focus:ring-4 focus:ring-hw-accent/10"
             />
           </div>
 
           {encryption !== 'nopass' && (
             <div className="relative group">
-              <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                <Lock className={cn("w-4 h-4 transition-colors duration-300", password ? "text-hw-accent" : "text-white/30")} />
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                <Lock className={cn("w-4 h-4 transition-colors duration-300", password ? "text-hw-accent" : "text-slate-400")} />
               </div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
-                className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] py-4.5 pl-14 pr-4 text-sm font-mono transition-all outline-none placeholder:text-hw-secondary/30 focus:border-hw-accent/50 focus:bg-white/[0.08]"
+                className="w-full bg-white border border-hw-border rounded-2xl py-4 pl-12 pr-4 text-sm font-sans transition-all outline-none placeholder:text-slate-400 text-slate-900 shadow-sm focus:border-hw-accent focus:ring-4 focus:ring-hw-accent/10"
               />
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-white mb-2 block pl-1">Security</label>
+              <label className="text-xs font-sans font-bold text-slate-900 mb-2 block pl-1">Security</label>
               <select
                 value={encryption}
                 onChange={(e) => setEncryption(e.target.value as any)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white outline-none focus:border-hw-accent/50 transition-all appearance-none"
+                className="w-full bg-white border border-hw-border rounded-xl py-3 px-4 text-sm font-sans text-slate-900 outline-none focus:border-hw-accent focus:ring-4 focus:ring-hw-accent/10 transition-all appearance-none shadow-sm"
               >
-                <option value="WPA" className="bg-hw-bg text-white">WPA/WPA2/WPA3</option>
-                <option value="WEP" className="bg-hw-bg text-white">WEP</option>
-                <option value="nopass" className="bg-hw-bg text-white">None</option>
+                <option value="WPA">WPA/WPA2/WPA3</option>
+                <option value="WEP">WEP</option>
+                <option value="nopass">None</option>
               </select>
             </div>
             <div>
-              <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-white mb-2 block pl-1">Hidden Network</label>
+              <label className="text-xs font-sans font-bold text-slate-900 mb-2 block pl-1">Hidden Network</label>
               <button
                 onClick={() => setIsHidden(!isHidden)}
                 className={cn(
-                  "w-full border rounded-xl py-3 px-4 text-xs font-mono transition-all flex items-center justify-center gap-2",
-                  isHidden ? "bg-hw-accent/20 border-hw-accent text-hw-accent" : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                  "w-full border rounded-xl py-3 px-4 text-sm font-sans transition-all flex items-center justify-center gap-2 shadow-sm",
+                  isHidden ? "bg-hw-accent text-white border-hw-accent" : "bg-white border-hw-border text-slate-700 hover:bg-slate-50"
                 )}
               >
                 {isHidden ? 'Yes' : 'No'}
@@ -159,9 +159,9 @@ export default function WifiQrGenerator() {
           animate={{ opacity: 1, height: 'auto' }}
           className="space-y-4 overflow-hidden"
         >
-          <div className="bg-white/5 border border-white/10 rounded-[1.5rem] p-4 flex flex-col gap-4">
+          <div className="bg-slate-50 border border-hw-border rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
             <div>
-              <p className="text-[10px] font-mono font-bold uppercase tracking-widest text-white mb-3">Accent Color</p>
+              <p className="text-xs font-sans font-bold text-slate-900 mb-3">Accent Color</p>
               <div className="flex items-center gap-3">
                 {PRESET_COLORS.map(color => (
                   <button
@@ -184,14 +184,10 @@ export default function WifiQrGenerator() {
       <motion.div
         layout
         className={cn(
-          "relative p-10 bg-white rounded-[3rem] shadow-[0_0_80px_rgba(0,0,0,0.4)] transition-all duration-700 group",
-          !isValid && "opacity-40 grayscale blur-[2px]"
+          "relative p-8 bg-white rounded-3xl shadow-sm border border-hw-border transition-all duration-700 group",
+          !isValid && "opacity-50 grayscale blur-[2px]"
         )}
       >
-        <div className="absolute -top-3 -left-3 glass-card px-3 py-1.5 rounded-full flex items-center gap-1.5 glow-accent border-hw-accent/30 z-20">
-          <ShieldCheck className="w-3 h-3 text-hw-accent" />
-          <span className="text-[8px] font-mono text-hw-accent font-black uppercase">Auto_Connect</span>
-        </div>
 
         <div id="wifi-generated-code" className="flex items-center justify-center min-h-[220px] min-w-[220px] relative z-10">
           <QRCodeSVG
@@ -199,20 +195,20 @@ export default function WifiQrGenerator() {
             size={1024}
             style={{ width: 220, height: 220 }}
             level="H"
-            includeMargin={false}
+            includeMargin={true}
             fgColor={fgColor}
           />
         </div>
 
         {isValid && (
-          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-30">
+          <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex gap-3 z-30">
             <button
               onClick={downloadCode}
-              className="bg-hw-accent text-white px-6 py-4 rounded-[1.5rem] shadow-[0_15px_30px_rgba(59,130,246,0.4)] hover:scale-105 active:scale-95 transition-all glow-accent flex items-center gap-2 group-hover:rotate-1"
+              className="bg-hw-accent hover:bg-blue-700 text-white px-6 py-3 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center gap-2 group-hover:-translate-y-1"
             >
-              <Download className="w-5 h-5" />
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest">
-                {Capacitor.isNativePlatform() ? 'Save to Gallery' : 'Download QR'}
+              <Download className="w-4 h-4" />
+              <span className="text-xs font-sans font-bold">
+                {Capacitor.isNativePlatform() ? 'Save' : 'Download'}
               </span>
             </button>
           </div>

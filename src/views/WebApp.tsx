@@ -92,8 +92,18 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
     }
     saveToHistory(text);
     
-    // Auto-open dialer if the scanned text is a phone number link
-    if (text.toLowerCase().startsWith('tel:')) {
+    const lowerText = text.toLowerCase().trim();
+    
+    // 1. Auto-open Phone numbers
+    if (lowerText.startsWith('tel:')) {
+      window.location.href = text;
+    } else if (/^\+?[\d\s-]{7,15}$/.test(text.trim())) {
+      window.location.href = `tel:${text.replace(/[\s-]/g, '')}`;
+    } 
+    // 2. Auto-open Web URLs and Deep Links
+    else if (lowerText.startsWith('http://') || lowerText.startsWith('https://')) {
+      window.open(text, '_blank', 'noopener,noreferrer');
+    } else if (isLink(text)) {
       window.location.href = text;
     }
   }, [saveToHistory]);
@@ -147,7 +157,7 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
   );
 
   return (
-    <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-hw-bg shadow-[0_0_100px_rgba(0,0,0,0.8)] border-x border-white/5 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-hw-bg shadow-2xl border-x border-hw-border relative overflow-hidden">
       {/* Background Glow removed for cleaner and faster UI */}
 
       {/* Header */}
@@ -168,22 +178,22 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setShowFeedback(true)}
-              className="p-2 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all text-hw-accent glow-accent"
+              className="p-2 bg-white rounded-xl border border-hw-border hover:bg-slate-50 transition-all text-hw-secondary shadow-sm"
               title="Give Feedback"
             >
               <MessageSquare className="w-4 h-4" />
             </button>
-            <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
-              <span className="text-[9px] font-mono text-hw-secondary uppercase tracking-[0.2em] font-bold">V1.3.0</span>
+            <div className="px-3 py-1 bg-white rounded-full border border-hw-border shadow-sm">
+              <span className="text-[9px] font-sans text-hw-secondary uppercase font-bold tracking-wider">V1.3.0</span>
             </div>
           </div>
         </div>
         <div className="pt-4 flex items-center gap-3">
-          <div className="w-10 h-10 glass-card rounded-xl flex items-center justify-center glow-accent overflow-hidden">
+          <div className="w-10 h-10 glass-card rounded-xl flex items-center justify-center overflow-hidden">
             <img src="./logo.png" alt="Logo" className="w-full h-full object-cover scale-110" />
           </div>
-          <h1 className="text-2xl font-mono font-bold tracking-tighter uppercase">
-            <span className="tracking-tight">ScanGen</span><span className="text-hw-accent">PRO</span>
+          <h1 className="text-2xl font-sans font-bold tracking-tight text-slate-900">
+            ScanGen<span className="text-hw-accent">PRO</span>
           </h1>
         </div>
         {/* Show "Limited" subtitle only on web, not inside APK */}
@@ -219,12 +229,12 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
-              <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 mb-4">
+              <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-4 border border-hw-border">
                 <button
                   onClick={() => setGenerateMode('standard')}
                   className={cn(
-                    "flex-1 py-2 text-[10px] font-mono uppercase tracking-widest font-bold rounded-xl transition-all",
-                    generateMode === 'standard' ? "bg-hw-accent text-white shadow-lg" : "text-hw-secondary hover:text-white"
+                    "flex-1 py-2 text-[11px] font-sans font-bold rounded-xl transition-all",
+                    generateMode === 'standard' ? "bg-white text-slate-900 shadow-sm" : "text-hw-secondary hover:text-slate-900"
                   )}
                 >
                   Standard
@@ -232,8 +242,8 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
                 <button
                   onClick={() => setGenerateMode('wifi')}
                   className={cn(
-                    "flex-1 py-2 text-[10px] font-mono uppercase tracking-widest font-bold rounded-xl transition-all flex items-center justify-center gap-2",
-                    generateMode === 'wifi' ? "bg-hw-accent text-white shadow-lg" : "text-hw-secondary hover:text-white"
+                    "flex-1 py-2 text-[11px] font-sans font-bold rounded-xl transition-all flex items-center justify-center gap-2",
+                    generateMode === 'wifi' ? "bg-white text-slate-900 shadow-sm" : "text-hw-secondary hover:text-slate-900"
                   )}
                 >
                   <Wifi className="w-3 h-3" /> WiFi
@@ -253,11 +263,11 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
               className="space-y-4"
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-hw-secondary">Recent Activity</h2>
+                <h2 className="text-lg font-sans font-bold text-slate-900">Recent Activity</h2>
                 {history.length > 0 && (
                   <button 
                     onClick={clearHistory}
-                    className="text-[10px] font-mono text-hw-accent uppercase hover:underline flex items-center gap-1"
+                    className="text-[11px] font-sans font-bold text-red-500 hover:text-red-600 flex items-center gap-1"
                   >
                     <Trash2 className="w-3 h-3" /> Clear All
                   </button>
@@ -271,7 +281,7 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search by text, wifi, payment..."
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs font-mono text-white outline-none focus:border-hw-accent/50 transition-all placeholder:text-hw-secondary/50"
+                    className="w-full bg-white border border-hw-border rounded-xl py-3 px-4 text-sm font-sans text-slate-900 outline-none focus:border-hw-accent focus:ring-4 focus:ring-hw-accent/10 transition-all placeholder:text-slate-400 shadow-sm"
                   />
                 </div>
               )}
@@ -288,19 +298,19 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
                       layout
                       key={item.id}
                       onClick={() => setSelectedHistoryItem(item)}
-                      className="bg-hw-card p-4 rounded-2xl border border-white/5 shadow-sm hover:shadow-md transition-shadow group cursor-pointer"
+                      className="bg-white p-4 rounded-2xl border border-hw-border shadow-sm hover:shadow-md transition-shadow group cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[9px] font-mono bg-white/5 px-1.5 py-0.5 rounded text-hw-secondary uppercase tracking-tighter">
+                            <span className="text-[10px] font-sans bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-bold">
                               {new Date(item.timestamp).toLocaleTimeString()}
                             </span>
-                            <span className="text-[9px] font-mono text-hw-secondary/40 uppercase">
+                            <span className="text-[10px] font-sans text-slate-400 font-bold uppercase">
                               {item.type}
                             </span>
                           </div>
-                          <p className="text-sm font-mono break-all line-clamp-2 text-white">{item.text}</p>
+                          <p className="text-sm font-sans break-all line-clamp-2 text-slate-900 mt-1">{item.text}</p>
                         </div>
                         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
@@ -373,14 +383,14 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="glass-card p-8 rounded-[2.5rem] max-w-xs w-full space-y-6 text-center shadow-2xl"
+              className="bg-white p-8 rounded-3xl max-w-xs w-full space-y-6 text-center shadow-xl border border-hw-border"
             >
-              <div className="w-20 h-20 bg-hw-accent/10 rounded-3xl flex items-center justify-center mx-auto glow-accent">
+              <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto">
                 <Download className="w-10 h-10 text-hw-accent" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold tracking-tight">Unlock All Features</h3>
-                <p className="text-xs text-hw-secondary leading-relaxed">
+                <h3 className="text-xl font-bold tracking-tight text-slate-900">Unlock All Features</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">
                   QR code generation is exclusive to our Pro Android app. Download for the full experience.
                 </p>
               </div>
@@ -417,22 +427,22 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="glass-card p-8 rounded-[2.5rem] max-w-md w-full space-y-6 shadow-2xl relative border border-white/10"
+              className="bg-white p-8 rounded-3xl max-w-md w-full space-y-6 shadow-xl relative border border-hw-border"
             >
               <button 
                 onClick={() => setShowFeedback(false)}
-                className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-hw-secondary transition-colors"
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-50 text-slate-400 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="w-16 h-16 bg-hw-accent/10 rounded-2xl flex items-center justify-center glow-accent">
+              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center">
                 <MessageSquare className="w-8 h-8 text-hw-accent" />
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-xl font-bold tracking-tight text-white">Share Your Feedback</h3>
-                <p className="text-xs text-hw-secondary leading-relaxed">
+                <h3 className="text-xl font-bold tracking-tight text-slate-900">Share Your Feedback</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">
                   Notice a bug or want a new feature? Tell us how we can improve ScanGen-PRO.
                 </p>
               </div>
@@ -442,7 +452,7 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
                   placeholder="Type your message here..."
-                  className="w-full h-32 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-mono text-white outline-none focus:border-hw-accent/50 transition-all placeholder:text-hw-secondary/30 resize-none"
+                  className="w-full h-32 bg-white border border-hw-border rounded-2xl p-4 text-sm font-sans text-slate-900 outline-none focus:border-hw-accent focus:ring-4 focus:ring-hw-accent/10 transition-all placeholder:text-slate-400 resize-none shadow-sm"
                 />
                 
                 <button 
@@ -475,22 +485,22 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="glass-card p-6 rounded-[2rem] max-w-sm w-full space-y-5 relative border border-white/10 shadow-2xl max-h-[80vh] overflow-y-auto"
+              className="bg-white p-6 rounded-3xl max-w-sm w-full space-y-5 relative border border-hw-border shadow-xl max-h-[80vh] overflow-y-auto"
             >
               <button 
                 onClick={() => setSelectedHistoryItem(null)}
-                className="absolute top-5 right-5 p-2 rounded-full hover:bg-white/5 text-hw-secondary transition-colors"
+                className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-50 text-slate-400 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
               
               <div className="flex items-center gap-2 mb-2">
                 <History className="w-5 h-5 text-hw-accent" />
-                <h3 className="text-sm font-bold tracking-tight text-white uppercase font-mono">Full Details</h3>
+                <h3 className="text-sm font-bold tracking-tight text-slate-900 font-sans">Full Details</h3>
               </div>
               
-              <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                <p className="text-sm font-mono break-all whitespace-pre-wrap text-white leading-relaxed">
+              <div className="bg-slate-50 p-4 rounded-xl border border-hw-border">
+                <p className="text-sm font-sans break-all whitespace-pre-wrap text-slate-900 leading-relaxed">
                   {selectedHistoryItem.text}
                 </p>
               </div>
@@ -568,13 +578,13 @@ function NavButton({ active, onClick, icon, label }: { active: boolean; onClick:
       onClick={onClick}
       className={cn(
         "flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all duration-300",
-        active ? "bg-white/10 text-white shadow-inner" : "text-hw-secondary hover:text-white/60"
+        active ? "bg-slate-100 text-hw-accent shadow-sm" : "text-hw-secondary hover:text-slate-700"
       )}
     >
       <div className={cn("mb-1 transition-transform duration-300", active && "scale-110")}>
         {icon}
       </div>
-      <span className="text-[8px] font-mono uppercase tracking-[0.15em] font-bold">{label}</span>
+      <span className="text-[10px] font-sans font-bold">{label}</span>
     </button>
   );
 }
@@ -594,38 +604,23 @@ function ResultCard({ data, onClear }: { data: string; onClear: () => void }) {
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            <p className="text-[10px] font-mono text-hw-secondary uppercase tracking-[0.2em] font-bold">Decoded Protocol</p>
+            <span className="w-2 h-2 rounded-full bg-green-500" />
+            <p className="text-[11px] font-sans text-hw-secondary font-bold">Decoded Protocol</p>
           </div>
-          <p className="text-sm font-mono break-all leading-relaxed text-white bg-white/5 p-3 rounded-xl border border-white/5">{data}</p>
+          <p className="text-sm font-sans break-all leading-relaxed text-slate-900 bg-slate-50 p-4 rounded-xl border border-hw-border shadow-sm">{data}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {isLink(data) && (
-          <button
-            onClick={() => {
-              if (isDeepLink) {
-                window.location.href = data;
-              } else {
-                window.open(data, '_blank', 'noopener,noreferrer');
-              }
-            }}
-            className="col-span-2 flex items-center justify-center gap-2 bg-hw-accent hover:bg-hw-accent/80 text-white py-4 rounded-2xl text-[11px] font-mono uppercase tracking-[0.2em] font-bold transition-all glow-accent active:scale-[0.98]"
-          >
-            <ExternalLink className="w-4 h-4" /> 
-            {isDeepLink ? 'Open Secure App' : 'Open Link'}
-          </button>
-        )}
         <button
           onClick={() => navigator.clipboard.writeText(data)}
-          className="flex items-center justify-center gap-2 glass-button text-white py-4 rounded-2xl text-[10px] font-mono uppercase tracking-widest font-bold"
+          className="flex items-center justify-center gap-2 glass-button text-slate-700 py-4 rounded-2xl text-[11px] font-sans font-bold"
         >
           <Copy className="w-4 h-4 text-hw-secondary" /> Copy
         </button>
         <button
           onClick={onClear}
-          className="flex items-center justify-center gap-2 glass-button text-white py-4 rounded-2xl text-[10px] font-mono uppercase tracking-widest font-bold"
+          className="flex items-center justify-center gap-2 glass-button text-slate-700 py-4 rounded-2xl text-[11px] font-sans font-bold"
         >
           <Scan className="w-4 h-4 text-hw-secondary" /> Dismiss
         </button>
