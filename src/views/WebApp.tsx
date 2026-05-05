@@ -94,14 +94,23 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
     
     const lowerText = text.toLowerCase().trim();
     
-    // 1. Auto-open Phone numbers
-    if (lowerText.startsWith('tel:')) {
+    // Auto-open logic for specific protocols
+    if (
+      lowerText.startsWith('tel:') || 
+      lowerText.startsWith('sms:') || 
+      lowerText.startsWith('mailto:') || 
+      lowerText.startsWith('whatsapp:') || 
+      lowerText.startsWith('upi:') ||
+      lowerText.startsWith('geo:') ||
+      lowerText.startsWith('vcard:')
+    ) {
       window.location.href = text;
+    } else if (lowerText.startsWith('wifi:')) {
+      // WiFi protocol doesn't have a native browser handler, but we can show it
+      console.log("WiFi QR Detected", text);
     } else if (/^\+?[\d\s-]{7,15}$/.test(text.trim())) {
       window.location.href = `tel:${text.replace(/[\s-]/g, '')}`;
-    } 
-    // 2. Auto-open Web URLs and Deep Links
-    else if (lowerText.startsWith('http://') || lowerText.startsWith('https://')) {
+    } else if (lowerText.startsWith('http://') || lowerText.startsWith('https://')) {
       window.open(text, '_blank', 'noopener,noreferrer');
     } else if (isLink(text)) {
       window.location.href = text;
@@ -120,7 +129,6 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
   };
 
   const handleTabChange = (tab: 'scan' | 'generate' | 'history' | 'stats') => {
-    // On web browser, gate the generate tab behind the download prompt
     if (tab === 'generate' && !isNative) {
       setShowPrompt(true);
       return;
@@ -157,13 +165,9 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
   );
 
   return (
-    <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-hw-bg shadow-2xl border-x border-hw-border relative overflow-hidden">
-      {/* Background Glow removed for cleaner and faster UI */}
-
-      {/* Header */}
+    <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-hw-bg mesh-bg shadow-2xl border-x border-hw-border relative overflow-hidden">
       <header className="p-8 pb-4 space-y-1 relative z-10">
         <div className="flex items-center justify-between">
-          {/* Show Exit Demo ONLY on web browser, never in APK */}
           {!isNative && onBack ? (
             <button 
               onClick={onBack} 
@@ -173,7 +177,7 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
               <span className="text-[10px] font-mono uppercase tracking-widest font-bold">Exit Demo</span>
             </button>
           ) : (
-            <div /> /* Empty spacer for APK so justify-between still works */
+            <div />
           )}
           <div className="flex items-center gap-2">
             <button 
@@ -196,13 +200,11 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
             ScanGen<span className="text-hw-accent">PRO</span>
           </h1>
         </div>
-        {/* Show "Limited" subtitle only on web, not inside APK */}
         {!isNative && (
           <p className="text-[10px] font-mono text-hw-secondary/60 uppercase tracking-[0.3em] pl-1">Live Web Preview (Limited)</p>
         )}
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-6 relative" onScroll={activeTab === 'history' ? handleScroll : undefined} ref={activeTab === 'history' ? historyContainerRef : undefined}>
         <AnimatePresence mode="wait">
           {activeTab === 'scan' && (
@@ -340,7 +342,6 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
                 </div>
               )}
 
-              {/* Scroll to Top Button */}
               <AnimatePresence>
                 {showScrollTop && (
                   <motion.button
@@ -370,7 +371,6 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
         </AnimatePresence>
       </main>
 
-      {/* Download Prompt Modal — ONLY shown on web browser, never in APK */}
       <AnimatePresence>
         {showPrompt && !isNative && (
           <motion.div 
@@ -404,7 +404,7 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
                 </a>
                 <button 
                   onClick={() => setShowPrompt(false)}
-                  className="w-full text-[10px] font-mono text-hw-secondary uppercase tracking-widest hover:text-white transition-colors"
+                  className="w-full text-[10px] font-sans text-slate-400 uppercase tracking-widest hover:text-hw-accent transition-colors mt-2"
                 >
                   Maybe Later
                 </button>
@@ -592,6 +592,16 @@ function NavButton({ active, onClick, icon, label }: { active: boolean; onClick:
 function ResultCard({ data, onClear }: { data: string; onClear: () => void }) {
   const isWebLink = data.startsWith('http');
   const isDeepLink = isLink(data) && !isWebLink;
+  const isWifi = data.toUpperCase().startsWith('WIFI:');
+
+  const parseWifi = (wifiData: string) => {
+    const ssid = wifiData.match(/S:([^;]+);/)?.[1] || 'Unknown';
+    const pass = wifiData.match(/P:([^;]+);/)?.[1] || 'None';
+    const type = wifiData.match(/T:([^;]+);/)?.[1] || 'Open';
+    return { ssid, pass, type };
+  };
+
+  const wifi = isWifi ? parseWifi(data) : null;
 
   return (
     <motion.div
@@ -599,24 +609,45 @@ function ResultCard({ data, onClear }: { data: string; onClear: () => void }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       className="glass-card p-6 rounded-[2rem] space-y-5 relative overflow-hidden"
     >
-
-      
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            <p className="text-[11px] font-sans text-hw-secondary font-bold">Decoded Protocol</p>
+            <span className={cn("w-2 h-2 rounded-full", isWifi ? "bg-hw-accent animate-pulse" : "bg-green-500")} />
+            <p className="text-[11px] font-sans text-hw-secondary font-bold">
+              {isWifi ? 'WiFi Configuration Detected' : 'Decoded Protocol'}
+            </p>
           </div>
-          <p className="text-sm font-sans break-all leading-relaxed text-slate-900 bg-slate-50 p-4 rounded-xl border border-hw-border shadow-sm">{data}</p>
+          
+          {isWifi && wifi ? (
+            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Network (SSID)</span>
+                <span className="text-sm font-bold text-slate-900">{wifi.ssid}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Security</span>
+                <span className="text-xs font-mono font-bold text-slate-600">{wifi.type}</span>
+              </div>
+              {wifi.pass !== 'None' && (
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Password</span>
+                  <span className="text-xs font-mono font-bold text-slate-600">••••••••</span>
+                </div>
+              )}
+              <p className="text-[9px] text-hw-accent font-bold pt-1">Connect via system WiFi settings</p>
+            </div>
+          ) : (
+            <p className="text-sm font-sans break-all leading-relaxed text-slate-900 bg-slate-50 p-4 rounded-xl border border-hw-border shadow-sm">{data}</p>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <button
-          onClick={() => navigator.clipboard.writeText(data)}
+          onClick={() => navigator.clipboard.writeText(isWifi && wifi ? wifi.pass : data)}
           className="flex items-center justify-center gap-2 glass-button text-slate-700 py-4 rounded-2xl text-[11px] font-sans font-bold"
         >
-          <Copy className="w-4 h-4 text-hw-secondary" /> Copy
+          <Copy className="w-4 h-4 text-hw-secondary" /> {isWifi ? 'Copy Pass' : 'Copy'}
         </button>
         <button
           onClick={onClear}

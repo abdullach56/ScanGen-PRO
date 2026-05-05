@@ -11,7 +11,7 @@ interface ScannerProps {
 type CameraStatus = 'checking' | 'ready' | 'denied' | 'unavailable' | 'error' | 'scanning_file';
 
 const SCAN_CONFIG = {
-  fps: 30, // Increased for smoother and faster detection
+  fps: 30, // Maximum speed
   qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
     const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
     const qrboxSize = Math.floor(minEdgeSize * 0.75);
@@ -22,7 +22,7 @@ const SCAN_CONFIG = {
   },
   aspectRatio: 1.0,
   disableFlip: false,
-  useBarCodeDetectorIfSupported: true, // Uses native OS APIs for extremely fast scanning
+  useBarCodeDetectorIfSupported: true, 
 };
 
 export default function Scanner({ onScan }: ScannerProps) {
@@ -126,14 +126,38 @@ export default function Scanner({ onScan }: ScannerProps) {
     if (!file || !scannerRef.current) return;
 
     setStatus('scanning_file');
+    
+    // Stop camera if it's running to avoid resource conflicts during file scan
+    const wasScanning = scannerRef.current.isScanning;
+    if (wasScanning) {
+      try {
+        await scannerRef.current.stop();
+      } catch (e) {}
+    }
+
     try {
-      const result = await scannerRef.current.scanFile(file, true);
+      // Re-initialize for file scan with all formats just in case
+      const fileScanner = new Html5Qrcode("reader", { verbose: false });
+      const result = await fileScanner.scanFile(file, true);
       onScan(result, { decodedText: result });
       setStatus('ready');
+      
+      // Cleanup file scanner
+      fileScanner.clear();
+      
+      // Restart camera if it was running
+      if (wasScanning) {
+        startScanner();
+      }
     } catch (err) {
       setToastMsg("Invalid or no readable QR code detected.");
       setStatus('ready');
       setTimeout(() => setToastMsg(null), 3000);
+      
+      // Restart camera if it was running
+      if (wasScanning) {
+        startScanner();
+      }
     }
   };
 
@@ -193,7 +217,7 @@ export default function Scanner({ onScan }: ScannerProps) {
                 <motion.button
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 5 }}
+                  transition={{ delay: 3 }}
                   onClick={() => window.location.reload()}
                   className="mt-6 text-xs font-sans text-hw-accent underline hover:text-blue-700 transition-colors"
                 >

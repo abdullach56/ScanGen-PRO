@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Download, Type, QrCode, AlertTriangle, ShieldCheck, Upload, X } from 'lucide-react';
+import { Download, Type, QrCode, AlertTriangle, ShieldCheck, Upload, X, User, Mail, MessageSquare, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '@/src/lib/utils';
+import { cn } from '../lib/utils';
 import { isValidQR } from '../lib/security';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -10,28 +10,46 @@ import { Capacitor } from '@capacitor/core';
 
 const PRESET_COLORS = ['#0A0A0B', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
+type GenMode = 'text' | 'vcard' | 'email' | 'sms' | 'geo';
+
 export default function Generator() {
+  const [mode, setMode] = useState<GenMode>('text');
   const [text, setText] = useState('https://scangen-pro.com');
+  const [vcard, setVcard] = useState({ name: '', phone: '', email: '', org: '' });
+  const [email, setEmail] = useState({ to: '', subject: '', body: '' });
+  const [sms, setSms] = useState({ phone: '', body: '' });
+  const [geo, setGeo] = useState({ lat: '', lng: '' });
+  
   const [fgColor, setFgColor] = useState('#0A0A0B');
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const formatQRValue = (val: string) => {
-    const cleaned = val.trim();
-    if (/^\+?[\d\s-]{7,15}$/.test(cleaned)) {
-      return `tel:${cleaned.replace(/[\s-]/g, '')}`;
+  const finalQRValue = useMemo(() => {
+    switch (mode) {
+      case 'vcard':
+        return `BEGIN:VCARD\nVERSION:3.0\nN:${vcard.name}\nORG:${vcard.org}\nTEL:${vcard.phone}\nEMAIL:${vcard.email}\nEND:VCARD`;
+      case 'email':
+        return `mailto:${email.to}?subject=${encodeURIComponent(email.subject)}&body=${encodeURIComponent(email.body)}`;
+      case 'sms':
+        return `smsto:${sms.phone}:${sms.body}`;
+      case 'geo':
+        return `geo:${geo.lat},${geo.lng}`;
+      default:
+        const cleaned = text.trim();
+        if (/^\+?[\d\s-]{7,15}$/.test(cleaned)) {
+          return `tel:${cleaned.replace(/[\s-]/g, '')}`;
+        }
+        return cleaned;
     }
-    return cleaned;
-  };
+  }, [mode, text, vcard, email, sms, geo]);
 
-  const finalQRValue = useMemo(() => formatQRValue(text), [text]);
   const isValid = useMemo(() => isValidQR(finalQRValue), [finalQRValue]);
 
   const autoLogoUrl = useMemo(() => {
     if (logoBase64) return logoBase64;
     return './logo.png';
-  }, [text, logoBase64]);
+  }, [logoBase64]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,11 +101,9 @@ export default function Generator() {
             const savedFile = await Filesystem.writeFile({
               path: fileName,
               data: base64Data,
-              directory: Directory.Documents, // Using Documents as a safe public-ish spot, or Pictures
+              directory: Directory.Documents,
             });
 
-            // For Gallery visibility on Android, we'd ideally use a more specific plugin 
-            // or Share to trigger the intent and make it accessible.
             await Share.share({
               title: 'Saved QR Code',
               text: 'Check out your generated QR code',
@@ -115,113 +131,110 @@ export default function Generator() {
   };
 
   return (
-    <div className="flex flex-col items-center space-y-8 w-full max-w-md mx-auto relative z-10 pb-20">
-      <div className="w-full space-y-6">
-        {/* Header Label */}
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-            <QrCode className="w-4 h-4 text-hw-accent" />
-          </div>
-          <span className="text-sm font-sans font-bold text-slate-900">QR Code Generator</span>
+    <div className="flex flex-col items-center space-y-6 w-full max-w-md mx-auto relative z-10 pb-20">
+      <div className="w-full space-y-4">
+        {/* Mode Selector */}
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
+          {[
+            { id: 'text', icon: Type, label: 'Text' },
+            { id: 'vcard', icon: User, label: 'Contact' },
+            { id: 'email', icon: Mail, label: 'Email' },
+            { id: 'sms', icon: MessageSquare, label: 'SMS' },
+            { id: 'geo', icon: MapPin, label: 'Maps' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setMode(item.id as GenMode)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-bold whitespace-nowrap transition-all",
+                mode === item.id ? "bg-hw-accent text-white shadow-md" : "bg-white text-slate-500 border border-hw-border hover:bg-slate-50"
+              )}
+            >
+              <item.icon className="w-3.5 h-3.5" />
+              {item.label}
+            </button>
+          ))}
         </div>
 
-        {/* Dynamic Input */}
-        <div className="relative group">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <Type className={cn("w-4 h-4 transition-colors duration-300", isValid ? "text-hw-accent" : "text-red-500")} />
-          </div>
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Enter URL, text, or data..."
-            className={cn(
-              "w-full bg-white border rounded-2xl py-4 pl-12 pr-4 text-sm font-sans transition-all outline-none placeholder:text-slate-400 text-slate-900 shadow-sm",
-              isValid ? "border-hw-border focus:border-hw-accent focus:ring-4 focus:ring-hw-accent/10" : "border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100"
-            )}
-          />
-          <AnimatePresence>
-            {!isValid && (
-              <motion.div 
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-red-500"
-              >
-                <AlertTriangle className="w-4 h-4" />
-                <span className="text-[9px] font-mono uppercase font-black tracking-tighter">Too Long</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        {/* Inputs based on Mode */}
+        <div className="space-y-3">
+          {mode === 'text' && (
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Enter URL or text..."
+              className="w-full bg-white border border-hw-border rounded-2xl py-4 px-5 text-sm font-sans focus:border-hw-accent outline-none shadow-sm"
+            />
+          )}
 
-        {/* Customization Options */}
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="space-y-4 overflow-hidden"
-        >
-          <div className="bg-slate-50 border border-hw-border rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
-            {/* Logo Upload */}
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs font-sans font-bold text-slate-900">Custom Logo</p>
-                <p className="text-[10px] font-sans text-hw-secondary mt-0.5">Auto-fetch from links if empty</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {logoBase64 && (
-                  <button onClick={removeLogo} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors">
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-white border border-hw-border text-slate-700 text-xs font-sans font-bold flex items-center justify-center gap-2 rounded-lg text-center shadow-sm hover:bg-slate-50"
-                >
-                  <Upload className="w-4 h-4" /> {logoBase64 ? 'Change' : 'Upload'}
-                </button>
-                <input 
-                  ref={fileInputRef}
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleFileUpload} 
-                  className="hidden" 
-                />
-              </div>
+          {mode === 'vcard' && (
+            <div className="grid grid-cols-1 gap-3">
+              <input type="text" placeholder="Full Name" value={vcard.name} onChange={(e) => setVcard({ ...vcard, name: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm" />
+              <input type="text" placeholder="Phone Number" value={vcard.phone} onChange={(e) => setVcard({ ...vcard, phone: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm" />
+              <input type="email" placeholder="Email Address" value={vcard.email} onChange={(e) => setVcard({ ...vcard, email: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm" />
+              <input type="text" placeholder="Organization" value={vcard.org} onChange={(e) => setVcard({ ...vcard, org: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm" />
             </div>
+          )}
 
-            <div className="h-px w-full bg-hw-border" />
+          {mode === 'email' && (
+            <div className="grid grid-cols-1 gap-3">
+              <input type="email" placeholder="To" value={email.to} onChange={(e) => setEmail({ ...email, to: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm" />
+              <input type="text" placeholder="Subject" value={email.subject} onChange={(e) => setEmail({ ...email, subject: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm" />
+              <textarea placeholder="Message body" value={email.body} onChange={(e) => setEmail({ ...email, body: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm h-24" />
+            </div>
+          )}
 
-            {/* Color Picker */}
+          {mode === 'sms' && (
+            <div className="grid grid-cols-1 gap-3">
+              <input type="text" placeholder="Phone Number" value={sms.phone} onChange={(e) => setSms({ ...sms, phone: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm" />
+              <textarea placeholder="Message body" value={sms.body} onChange={(e) => setSms({ ...sms, body: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm h-24" />
+            </div>
+          )}
+
+          {mode === 'geo' && (
+            <div className="grid grid-cols-2 gap-3">
+              <input type="text" placeholder="Latitude" value={geo.lat} onChange={(e) => setGeo({ ...geo, lat: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm" />
+              <input type="text" placeholder="Longitude" value={geo.lng} onChange={(e) => setGeo({ ...geo, lng: e.target.value })} className="bg-white border border-hw-border rounded-xl p-3 text-sm" />
+            </div>
+          )}
+        </div>
+
+        {/* Customization */}
+        <div className="bg-slate-50 border border-hw-border rounded-2xl p-4 flex flex-col gap-4 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-sans font-bold text-slate-900 mb-3">Accent Color</p>
-              <div className="flex items-center gap-3">
-                {PRESET_COLORS.map(color => (
-                  <button
-                    key={color}
-                    onClick={() => setFgColor(color)}
-                    className={cn(
-                      "w-8 h-8 rounded-full border-2 transition-transform duration-300",
-                      fgColor === color ? "border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.4)]" : "border-transparent scale-90 hover:scale-100"
-                    )}
-                    style={{ backgroundColor: color }}
-                    aria-label={`Select color ${color}`}
-                  />
-                ))}
-              </div>
+              <p className="text-xs font-bold text-slate-900">Custom Logo</p>
+              <p className="text-[10px] text-slate-400">Add icon to center</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {logoBase64 && (
+                <button onClick={removeLogo} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              <button onClick={() => fileInputRef.current?.click()} className="px-3 py-1.5 bg-white border border-hw-border rounded-lg text-[10px] font-bold hover:bg-slate-50">
+                {logoBase64 ? 'Change' : 'Upload'}
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
             </div>
           </div>
-        </motion.div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {PRESET_COLORS.map(color => (
+              <button key={color} onClick={() => setFgColor(color)} className={cn("w-6 h-6 rounded-full border-2 transition-all", fgColor === color ? "border-slate-400 scale-110" : "border-transparent")} style={{ backgroundColor: color }} />
+            ))}
+          </div>
+        </div>
       </div>
 
       <motion.div
         layout
         className={cn(
-          "relative p-8 bg-white rounded-3xl shadow-sm border border-hw-border transition-all duration-700 group",
+          "relative p-8 bg-white rounded-3xl shadow-sm border border-hw-border transition-all duration-700",
           !isValid && "opacity-50 grayscale blur-[2px]"
         )}
       >
-        <div id="generated-code" className="flex items-center justify-center min-h-[220px] min-w-[220px] relative z-10">
+        <div id="generated-code" className="flex items-center justify-center min-h-[220px] min-w-[220px]">
           <QRCodeSVG
             value={finalQRValue || ' '}
             size={1024}
@@ -229,26 +242,15 @@ export default function Generator() {
             level="H"
             includeMargin={true}
             fgColor={fgColor}
-            imageSettings={autoLogoUrl ? {
-              src: autoLogoUrl,
-              height: 48,
-              width: 48,
-              excavate: true,
-            } : undefined}
+            imageSettings={autoLogoUrl ? { src: autoLogoUrl, height: 48, width: 48, excavate: true } : undefined}
           />
         </div>
 
         {isValid && (
-          <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex gap-3 z-30">
-            <button
-              onClick={downloadCode}
-              className="bg-hw-accent hover:bg-blue-700 text-white px-6 py-3 rounded-xl shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center gap-2 group-hover:-translate-y-1"
-              title={Capacitor.isNativePlatform() ? "Save to Gallery" : "Download QR"}
-            >
+          <div className="absolute -bottom-5 left-1/2 -translate-x-1/2">
+            <button onClick={downloadCode} className="bg-hw-accent text-white px-6 py-3 rounded-xl shadow-md flex items-center gap-2">
               <Download className="w-4 h-4" />
-              <span className="text-xs font-sans font-bold">
-                {Capacitor.isNativePlatform() ? 'Save' : 'Download'}
-              </span>
+              <span className="text-xs font-bold">Save QR</span>
             </button>
           </div>
         )}
