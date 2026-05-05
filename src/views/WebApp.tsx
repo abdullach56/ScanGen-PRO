@@ -183,8 +183,9 @@ export default function WebApp({ isNative, onBack }: WebAppProps) {
             >
               <MessageSquare className="w-4 h-4" />
             </button>
-            <div className="px-3 py-1 bg-white rounded-full border border-hw-border shadow-sm">
-              <span className="text-[9px] font-sans text-hw-secondary uppercase font-bold tracking-wider">V1.3.2</span>
+            <div className="px-3 py-1 bg-hw-accent/10 rounded-full border border-hw-accent/20 shadow-sm flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-hw-accent animate-ping" />
+              <span className="text-[9px] font-sans text-hw-accent uppercase font-black tracking-wider">V1.3.2</span>
             </div>
           </div>
         </div>
@@ -577,8 +578,11 @@ function NavButton({ active, onClick, icon, label }: { active: boolean; onClick:
         active ? "bg-slate-100 text-hw-accent shadow-sm" : "text-hw-secondary hover:text-slate-700"
       )}
     >
-      <div className={cn("mb-1 transition-transform duration-300", active && "scale-110")}>
+      <div className={cn("mb-1 transition-transform duration-300 relative", active && "scale-110")}>
         {icon}
+        {label === "Create" && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse" />
+        )}
       </div>
       <span className="text-[10px] font-sans font-bold">{label}</span>
     </button>
